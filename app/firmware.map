@@ -1,0 +1,250 @@
+
+Discarded input sections
+
+ .group         0x00000000        0xc src/firmware.o
+ .group         0x00000000        0xc src/firmware.o
+ .group         0x00000000        0xc src/firmware.o
+ .group         0x00000000        0xc src/firmware.o
+ .group         0x00000000        0xc src/firmware.o
+ .group         0x00000000        0xc src/firmware.o
+ .group         0x00000000        0xc src/firmware.o
+ .group         0x00000000        0xc src/firmware.o
+ .group         0x00000000        0xc src/firmware.o
+ .group         0x00000000        0xc src/firmware.o
+ .group         0x00000000        0xc src/firmware.o
+ .group         0x00000000        0xc ../bsp/src/startup.o
+ .group         0x00000000        0xc ../bsp/src/startup.o
+ .group         0x00000000        0xc ../bsp/src/startup.o
+ .group         0x00000000        0xc ../bsp/src/startup.o
+ .group         0x00000000        0xc ../bsp/src/startup.o
+ .group         0x00000000        0xc ../bsp/src/startup.o
+ .group         0x00000000        0xc ../bsp/src/startup.o
+ .group         0x00000000        0xc ../bsp/src/startup.o
+ .group         0x00000000        0xc ../bsp/src/startup.o
+ .debug_macro   0x00000000      0xa60 ../bsp/src/startup.o
+ .debug_macro   0x00000000       0x22 ../bsp/src/startup.o
+ .debug_macro   0x00000000       0x56 ../bsp/src/startup.o
+ .debug_macro   0x00000000       0x51 ../bsp/src/startup.o
+ .debug_macro   0x00000000      0x103 ../bsp/src/startup.o
+ .debug_macro   0x00000000       0x6a ../bsp/src/startup.o
+ .debug_macro   0x00000000      0x1df ../bsp/src/startup.o
+ .debug_macro   0x00000000       0x22 ../bsp/src/startup.o
+ .debug_macro   0x00000000       0x2e ../bsp/src/startup.o
+ .group         0x00000000        0xc ../bsp/src/rcc.o
+ .group         0x00000000        0xc ../bsp/src/rcc.o
+ .group         0x00000000        0xc ../bsp/src/rcc.o
+ .group         0x00000000        0xc ../bsp/src/rcc.o
+ .group         0x00000000        0xc ../bsp/src/rcc.o
+ .group         0x00000000        0xc ../bsp/src/rcc.o
+ .group         0x00000000        0xc ../bsp/src/rcc.o
+ .group         0x00000000        0xc ../bsp/src/rcc.o
+ .group         0x00000000        0xc ../bsp/src/rcc.o
+ .group         0x00000000        0xc ../bsp/src/rcc.o
+ .debug_macro   0x00000000      0xa60 ../bsp/src/rcc.o
+ .debug_macro   0x00000000       0x22 ../bsp/src/rcc.o
+ .debug_macro   0x00000000       0x56 ../bsp/src/rcc.o
+ .debug_macro   0x00000000       0x51 ../bsp/src/rcc.o
+ .debug_macro   0x00000000      0x103 ../bsp/src/rcc.o
+ .debug_macro   0x00000000       0x6a ../bsp/src/rcc.o
+ .debug_macro   0x00000000      0x1df ../bsp/src/rcc.o
+ .debug_macro   0x00000000       0x22 ../bsp/src/rcc.o
+ .debug_macro   0x00000000       0x2e ../bsp/src/rcc.o
+ .debug_macro   0x00000000       0x76 ../bsp/src/rcc.o
+ .group         0x00000000        0xc ../bsp/src/gpio.o
+ .group         0x00000000        0xc ../bsp/src/gpio.o
+ .group         0x00000000        0xc ../bsp/src/gpio.o
+ .group         0x00000000        0xc ../bsp/src/gpio.o
+ .group         0x00000000        0xc ../bsp/src/gpio.o
+ .group         0x00000000        0xc ../bsp/src/gpio.o
+ .group         0x00000000        0xc ../bsp/src/gpio.o
+ .group         0x00000000        0xc ../bsp/src/gpio.o
+ .group         0x00000000        0xc ../bsp/src/gpio.o
+ .group         0x00000000        0xc ../bsp/src/gpio.o
+ .debug_macro   0x00000000      0xa60 ../bsp/src/gpio.o
+ .debug_macro   0x00000000       0x22 ../bsp/src/gpio.o
+ .debug_macro   0x00000000       0x56 ../bsp/src/gpio.o
+ .debug_macro   0x00000000       0x51 ../bsp/src/gpio.o
+ .debug_macro   0x00000000      0x103 ../bsp/src/gpio.o
+ .debug_macro   0x00000000       0x6a ../bsp/src/gpio.o
+ .debug_macro   0x00000000      0x1df ../bsp/src/gpio.o
+ .debug_macro   0x00000000       0x22 ../bsp/src/gpio.o
+ .debug_macro   0x00000000       0x2e ../bsp/src/gpio.o
+
+Memory Configuration
+
+Name             Origin             Length             Attributes
+flash            0x08000000         0x00010000         xr
+ram              0x20000000         0x00005000         xrw
+*default*        0x00000000         0xffffffff
+
+Linker script and memory map
+
+LOAD src/firmware.o
+LOAD ../bsp/src/startup.o
+LOAD ../bsp/src/rcc.o
+LOAD ../bsp/src/gpio.o
+START GROUP
+LOAD c:/gcc-arm-none-eabi/bin/../lib/gcc/arm-none-eabi/10.3.1/thumb/v7-m/nofp\libgcc.a
+LOAD c:/gcc-arm-none-eabi/bin/../lib/gcc/arm-none-eabi/10.3.1/../../../../arm-none-eabi/lib/thumb/v7-m/nofp\libg.a
+LOAD c:/gcc-arm-none-eabi/bin/../lib/gcc/arm-none-eabi/10.3.1/../../../../arm-none-eabi/lib/thumb/v7-m/nofp\libc.a
+END GROUP
+                0x20005000                PROVIDE (_stack = (ORIGIN (ram) + LENGTH (ram)))
+
+.text           0x08000000      0x258
+ *(.isr_vector)
+ .isr_vector    0x08000000      0x100 ../bsp/src/startup.o
+                0x08000000                vector_table
+ *(.text*)
+ .text          0x08000100       0x20 src/firmware.o
+ .text.startup  0x08000120       0x30 src/firmware.o
+                0x08000120                main
+ .text          0x08000150       0x48 ../bsp/src/startup.o
+                0x08000150                default_handler
+                0x08000150                nmi_handler
+                0x08000152                reset_handler
+ .text          0x08000198       0x3a ../bsp/src/rcc.o
+                0x08000198                rcc_periph_clock_enable
+                0x080001b4                rcc_periph_clock_disable
+ .text          0x080001d2       0x86 ../bsp/src/gpio.o
+                0x080001d2                gpio_set_mode
+                0x08000206                gpio_set_mode_mask
+                0x0800022a                gpio_set_pull
+                0x08000258                . = ALIGN (0x4)
+ *(.rodata*)
+                0x08000258                . = ALIGN (0x4)
+
+.glue_7         0x08000258        0x0
+ .glue_7        0x08000258        0x0 linker stubs
+
+.glue_7t        0x08000258        0x0
+ .glue_7t       0x08000258        0x0 linker stubs
+
+.vfp11_veneer   0x08000258        0x0
+ .vfp11_veneer  0x08000258        0x0 linker stubs
+
+.v4_bx          0x08000258        0x0
+ .v4_bx         0x08000258        0x0 linker stubs
+
+.iplt           0x08000258        0x0
+ .iplt          0x08000258        0x0 src/firmware.o
+
+.rel.dyn        0x08000258        0x0
+ .rel.iplt      0x08000258        0x0 src/firmware.o
+                0x08000258                . = ALIGN (0x4)
+
+.data           0x20000000        0x0 load address 0x08000258
+                0x20000000                _data = .
+ *(.data*)
+ .data          0x20000000        0x0 src/firmware.o
+ .data          0x20000000        0x0 ../bsp/src/startup.o
+ .data          0x20000000        0x0 ../bsp/src/rcc.o
+ .data          0x20000000        0x0 ../bsp/src/gpio.o
+                0x20000000                . = ALIGN (0x4)
+                0x20000000                _edata = .
+                0x08000258                _sidata = LOADADDR (.data)
+
+.igot.plt       0x20000000        0x0 load address 0x08000258
+ .igot.plt      0x20000000        0x0 src/firmware.o
+
+.bss            0x20000000        0x0 load address 0x08000258
+                0x20000000                _bss = .
+ *(.bss*)
+ .bss           0x20000000        0x0 src/firmware.o
+ .bss           0x20000000        0x0 ../bsp/src/startup.o
+ .bss           0x20000000        0x0 ../bsp/src/rcc.o
+ .bss           0x20000000        0x0 ../bsp/src/gpio.o
+ *(COMMON)
+                0x20000000                . = ALIGN (0x4)
+                0x20000000                _ebss = .
+OUTPUT(firmware.elf elf32-littlearm)
+LOAD linker stubs
+
+.debug_info     0x00000000      0xb4c
+ .debug_info    0x00000000      0x3e6 src/firmware.o
+ .debug_info    0x000003e6      0x251 ../bsp/src/startup.o
+ .debug_info    0x00000637      0x141 ../bsp/src/rcc.o
+ .debug_info    0x00000778      0x3d4 ../bsp/src/gpio.o
+
+.debug_abbrev   0x00000000      0x515
+ .debug_abbrev  0x00000000      0x1b8 src/firmware.o
+ .debug_abbrev  0x000001b8      0x150 ../bsp/src/startup.o
+ .debug_abbrev  0x00000308       0xa4 ../bsp/src/rcc.o
+ .debug_abbrev  0x000003ac      0x169 ../bsp/src/gpio.o
+
+.debug_loc      0x00000000      0x2f5
+ .debug_loc     0x00000000       0x8c src/firmware.o
+ .debug_loc     0x0000008c       0x98 ../bsp/src/startup.o
+ .debug_loc     0x00000124       0x4a ../bsp/src/rcc.o
+ .debug_loc     0x0000016e      0x187 ../bsp/src/gpio.o
+
+.debug_aranges  0x00000000       0x88
+ .debug_aranges
+                0x00000000       0x28 src/firmware.o
+ .debug_aranges
+                0x00000028       0x20 ../bsp/src/startup.o
+ .debug_aranges
+                0x00000048       0x20 ../bsp/src/rcc.o
+ .debug_aranges
+                0x00000068       0x20 ../bsp/src/gpio.o
+
+.debug_ranges   0x00000000       0x48
+ .debug_ranges  0x00000000       0x30 src/firmware.o
+ .debug_ranges  0x00000030       0x18 ../bsp/src/gpio.o
+
+.debug_macro    0x00000000     0x11ef
+ .debug_macro   0x00000000       0xa3 src/firmware.o
+ .debug_macro   0x000000a3      0xa60 src/firmware.o
+ .debug_macro   0x00000b03       0x22 src/firmware.o
+ .debug_macro   0x00000b25       0x56 src/firmware.o
+ .debug_macro   0x00000b7b       0x51 src/firmware.o
+ .debug_macro   0x00000bcc      0x103 src/firmware.o
+ .debug_macro   0x00000ccf       0x6a src/firmware.o
+ .debug_macro   0x00000d39      0x1df src/firmware.o
+ .debug_macro   0x00000f18       0x22 src/firmware.o
+ .debug_macro   0x00000f3a       0x2e src/firmware.o
+ .debug_macro   0x00000f68       0x76 src/firmware.o
+ .debug_macro   0x00000fde       0x34 src/firmware.o
+ .debug_macro   0x00001012       0x97 ../bsp/src/startup.o
+ .debug_macro   0x000010a9       0x8a ../bsp/src/rcc.o
+ .debug_macro   0x00001133       0x8e ../bsp/src/gpio.o
+ .debug_macro   0x000011c1       0x2e ../bsp/src/gpio.o
+
+.debug_line     0x00000000      0x8ed
+ .debug_line    0x00000000      0x278 src/firmware.o
+ .debug_line    0x00000278      0x22e ../bsp/src/startup.o
+ .debug_line    0x000004a6      0x1c9 ../bsp/src/rcc.o
+ .debug_line    0x0000066f      0x27e ../bsp/src/gpio.o
+
+.debug_str      0x00000000     0x43a4
+ .debug_str     0x00000000     0x412a src/firmware.o
+                               0x429a (size before relaxing)
+ .debug_str     0x0000412a      0x186 ../bsp/src/startup.o
+                               0x3dbe (size before relaxing)
+ .debug_str     0x000042b0       0x38 ../bsp/src/rcc.o
+                               0x3ed5 (size before relaxing)
+ .debug_str     0x000042e8       0xbc ../bsp/src/gpio.o
+                               0x4099 (size before relaxing)
+
+.comment        0x00000000       0x49
+ .comment       0x00000000       0x49 src/firmware.o
+                                 0x4a (size before relaxing)
+ .comment       0x00000049       0x4a ../bsp/src/startup.o
+ .comment       0x00000049       0x4a ../bsp/src/rcc.o
+ .comment       0x00000049       0x4a ../bsp/src/gpio.o
+
+.ARM.attributes
+                0x00000000       0x2d
+ .ARM.attributes
+                0x00000000       0x2d src/firmware.o
+ .ARM.attributes
+                0x0000002d       0x2d ../bsp/src/startup.o
+ .ARM.attributes
+                0x0000005a       0x2d ../bsp/src/rcc.o
+ .ARM.attributes
+                0x00000087       0x2d ../bsp/src/gpio.o
+
+.debug_frame    0x00000000      0x10c
+ .debug_frame   0x00000000       0x44 src/firmware.o
+ .debug_frame   0x00000044       0x30 ../bsp/src/startup.o
+ .debug_frame   0x00000074       0x30 ../bsp/src/rcc.o
+ .debug_frame   0x000000a4       0x68 ../bsp/src/gpio.o
