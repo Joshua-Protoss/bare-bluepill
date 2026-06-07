@@ -19,7 +19,7 @@ void gpio_set_mode(GPIO_reg_t *gpio_port, GPIO_pin_t pin, GPIO_mode_t mode, GPIO
     config = ((cnf & 0x03) << 2) | (mode & 0x03);
 
     // Clear the 4 bits and set new configuration
-    cr_reg &= ~(config << shift);
+    cr_reg &= ~(0xF << shift);
     cr_reg |= (config << shift);
 
     // Write to the appropriate register
