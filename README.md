@@ -14,6 +14,8 @@
 ⏳ Timers  
 ⏳ SysTick  
 
+Demo video here: https://youtu.be/WjqHCQbmScI
+
 ## Quick Example
 ```c
 #include "rcc.h"
