@@ -3,7 +3,7 @@
 **Bare metal library for STM32F103C8T6 Bluepill - No HAL, no CMSIS, just pure embedded C.**
 
 ## About
-`bare-bluepill` is a from-scratch implementation of peripheral drivers for the STM32F103C8T6 Bluepill board. Written entirely without vendor libraries to understand and control every single bit. I might add more peripherals and more complicated projects in the future.
+`bare-bluepill` is a from-scratch implementation of peripheral drivers for the STM32F103C8T6 Bluepill board. Written entirely without vendor libraries to understand and control every single bit. I might add more peripherals and more complicated projects in the future! 🚀
 
 ## Current Status
 ✅ GPIO Driver (Output, Push-pull)  
