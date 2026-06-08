@@ -13,6 +13,7 @@ static void scuffed_delay(uint32_t count) {
 } 
 
 int main(void) {
+    rcc_clock_configure(&RCC_CLOCK_HSE_PLL_72MHZ);
     rcc_periph_clock_enable(RCC_GPIOC);
     gpio_set_mode(LED_PORT, LED_PIN, GPIO_MODE_OUTPUT_50MHZ, GPIO_CNF_OUTPUT_PUSHPULL);
 
