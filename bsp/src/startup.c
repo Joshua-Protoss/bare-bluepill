@@ -50,4 +50,3 @@ void default_handler(void){
 
 void nmi_handler(void) __attribute__((weak, used, alias("default_handler")));
 
-///c/gcc-arm-none-eabi/bin/arm-none-eabi-objdump -d firmware.elf | less

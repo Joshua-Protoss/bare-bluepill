@@ -17,9 +17,9 @@ int main(void) {
     gpio_set_mode(LED_PORT, LED_PIN, GPIO_MODE_OUTPUT_50MHZ, GPIO_CNF_OUTPUT_PUSHPULL);
 
     while(1){
-        gpio_write_pin(LED_PORT, LED_PIN, false); // turn on
+        gpio_write_pin(LED_PORT, LED_PIN, false); // turn on for bluepill (active low)
         scuffed_delay(8000000 / 10);
-        gpio_write_pin(LED_PORT, LED_PIN, true); // turn off
+        gpio_write_pin(LED_PORT, LED_PIN, true); // turn off for bluepill
         scuffed_delay(8000000 / 10);
     }
     return 0;
