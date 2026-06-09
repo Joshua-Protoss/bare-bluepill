@@ -39,6 +39,4 @@ bool systick_get_countflag(void);
 void systick_clear_counter(void);
 uint32_t systick_get_calib(void);
 
-extern volatile uint32_t systick_ticks;
-
 #endif // INC_SYSTICK_H

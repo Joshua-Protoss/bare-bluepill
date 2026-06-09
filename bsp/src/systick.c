@@ -41,7 +41,6 @@ bool systick_set_frequency(uint32_t desired_freq, uint32_t ahb_freq){
         }
     }
 
-
     systick_set_reload(ticks - 1);
 
     // Enable timer and interrupt by default
@@ -67,7 +66,7 @@ void systick_interrupt_disable(void){
 }
 
 bool systick_get_countflag(void){
-   return (SYSTICK->SYST_CSR & SYST_CSR_COUNTFLAG) ? 1 : 0;
+   return (SYSTICK->SYST_CSR & SYST_CSR_COUNTFLAG) != 0;
 }
 
 uint32_t systick_get_value(void){
