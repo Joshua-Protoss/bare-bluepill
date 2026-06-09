@@ -33,7 +33,7 @@
 #define RCC_CR_PLLON             BIT(24)
 #define RCC_CR_PLLRDY            BIT(25)
 
-// RCC_CFGR hex bits
+// RCC_CFGR hex bits and bit shift
 #define RCC_CFGR_SW_HSI         0x00
 #define RCC_CFGR_SW_HSE         0x01
 #define RCC_CFGR_SW_PLL         0x02
@@ -53,7 +53,7 @@
 #define RCC_CFGR_PLLMUL_SHIFT    18      // PLL MULTIPLIER
 #define RCC_CFGR_USBPRE_SHIFT    22
 
-// FLASH_ACR bit positions
+// FLASH_ACR bit shift positions
 #define FLASH_ACR_LATENCY_SHIFT  0
 #define FLASH_ACR_HLFCYA         BIT(3)
 #define FLASH_ACR_PRFTBE         BIT(4)

@@ -8,6 +8,7 @@ int main(void);
 void default_handler(void);
 void reset_handler(void);
 void nmi_handler(void);
+void systick_handler(void);
 
 __attribute__((section(".isr_vector")))
 vector_table_t vector_table = {
@@ -21,7 +22,7 @@ vector_table_t vector_table = {
     .sv_call = default_handler,
     .debug_monitor = default_handler,
     .pend_sv = default_handler,
-    .systick = default_handler
+    .systick = systick_handler
 };
 
 void __attribute__((weak,used)) reset_handler(void){
@@ -49,4 +50,6 @@ void default_handler(void){
 }
 
 void nmi_handler(void) __attribute__((weak, used, alias("default_handler")));
+void systick_handler(void) __attribute__((weak, used, alias("default_handler")));
+
 

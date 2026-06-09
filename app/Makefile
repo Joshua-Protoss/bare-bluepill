@@ -25,6 +25,7 @@ OBJS += $(SRC_DIR)/$(BINARY).o
 OBJS += $(BSP_SRC_DIR)/startup.o
 OBJS += $(BSP_SRC_DIR)/rcc.o
 OBJS += $(BSP_SRC_DIR)/gpio.o
+OBJS += $(BSP_SRC_DIR)/systick.o
 
 ###################################################################
 # C Flags
