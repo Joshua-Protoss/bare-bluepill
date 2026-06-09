@@ -14,14 +14,13 @@ static void scuffed_delay(uint32_t count) {
 
 int main(void) {
     rcc_clock_configure(&RCC_CLOCK_HSE_44MHZ);
+    uint32_t sysclk = rcc_get_sysclk_freq();
     rcc_periph_clock_enable(RCC_GPIOC);
     gpio_set_mode(LED_PORT, LED_PIN, GPIO_MODE_OUTPUT_50MHZ, GPIO_CNF_OUTPUT_PUSHPULL);
 
     while(1){
-        gpio_write_pin(LED_PORT, LED_PIN, false); // turn on for bluepill (active low)
-        scuffed_delay(8000000 / 10);
-        gpio_write_pin(LED_PORT, LED_PIN, true); // turn off for bluepill
-        scuffed_delay(8000000 / 10);
+        gpio_toggle_pin(PORT_GPIOC, PIN_GPIO13);
+        scuffed_delay(sysclk / 44);
     }
     return 0;
 }
