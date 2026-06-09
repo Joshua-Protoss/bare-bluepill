@@ -30,9 +30,22 @@ const rcc_clock_config_t RCC_CLOCK_HSE_PLL_72MHZ = {
     .sysclk_source = RCC_SYSCLK_PLL,
     .pll_source = RCC_PLLSRC_HSE,
     .pll_mult = RCC_PLLMULT_9,
+    .pll_hse_div = RCC_PLLXTPRE_DIV1,
     .ahb_div = RCC_AHB_DIV_1,
     .apb1_div = RCC_APB_DIV_2,
     .apb2_div = RCC_APB_DIV_1
+};
+
+// 44MHz: HSE (8MHz) / 2 = 4MHz × 11 = 44MHz
+const rcc_clock_config_t RCC_CLOCK_HSE_44MHZ = {
+    .hse_freq_hz = 8000000,
+    .sysclk_source = RCC_SYSCLK_PLL,
+    .pll_source = RCC_PLLSRC_HSE,
+    .pll_mult = RCC_PLLMULT_11,
+    .pll_hse_div = RCC_PLLXTPRE_DIV2,   // 8MHz / 2 = 4MHz input
+    .ahb_div = RCC_AHB_DIV_1,          // 44MHz AHB
+    .apb1_div = RCC_APB_DIV_2,         // 22MHz APB1 (max 36MHz)
+    .apb2_div = RCC_APB_DIV_1,         // 44MHz APB2
 };
 
 // ===== RCC CLOCK CONFIGURATION FUNCTIONS =====
@@ -51,12 +64,18 @@ void rcc_clock_configure(const rcc_clock_config_t *config){
         RCC_CR &= ~RCC_CR_PLLON;        // Turn off PLL before configuring, the hardware will automatically set PLLRDY to 0 (unlock)
         while (RCC_CR & RCC_CR_PLLRDY);  // wait for PLL off (PLLRDY set to 0)
 
-        // Clear PLL config bits
+        // Clear PLL config bits, and set HSE divider to 1 (default: not divided)
         RCC_CFGR &= ~(RCC_CFGR_PLLSRC | RCC_CFGR_PLLXTPRE | (0x0F << RCC_CFGR_PLLMUL_SHIFT));
 
         // Set PLL source
         if (config->pll_source == RCC_PLLSRC_HSE) {
             RCC_CFGR |= RCC_CFGR_PLLSRC;
+
+            // set HSE divider for PLL
+            if (config->pll_hse_div == RCC_PLLXTPRE_DIV2){
+                RCC_CFGR |= RCC_CFGR_PLLXTPRE;
+            } 
+            // else: RCC_CFGR_PLLXTPRE = 0 (HSE not divided, default)
         }
         
         // Set PLL multiplier
@@ -78,7 +97,11 @@ void rcc_clock_configure(const rcc_clock_config_t *config){
             break;
         case RCC_SYSCLK_PLL:
             if(config->pll_source == RCC_PLLSRC_HSE) {
-                new_sysclk_freq = config->hse_freq_hz * (config->pll_mult + 2);
+                uint32_t pll_input = config->hse_freq_hz;
+                if (config->pll_hse_div == RCC_PLLXTPRE_DIV2) {
+                    pll_input /= 2;             // HSE frequency divided by 2 
+                }
+                new_sysclk_freq = pll_input * (config->pll_mult + 2);
             } else {
                 new_sysclk_freq = (config->hsi_freq_hz / 2) * (config->pll_mult + 2);
             }

@@ -71,3 +71,4 @@ void nvic_can_sce_isr(void);
 #endif // INC_NVIC_H
 
 ///c/gcc-arm-none-eabi/bin/arm-none-eabi-objdump -d firmware.elf | less
+//"cortex-debug.openocdPath": "c:/openocd/bin/openocd",

@@ -67,8 +67,7 @@ clean :
 	$(Q)$(RM) -f $(GENERATED_BINARIES) generated.* $(OBJS)
 
 flash : $(BINARY).bin
-	openocd -f interface/stlink.cfg \
-	        -c "transport select swd" \
+	openocd -f interface/stlink-v2.cfg \
 	        -c "adapter speed 100" \
 	        -f target/stm32f1x.cfg \
 	        -c "init" -c "halt" \

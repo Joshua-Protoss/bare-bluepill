@@ -135,6 +135,12 @@ typedef enum {
     RCC_PLLMULT_16 = 0x0E
 } rcc_pllmult_t;
 
+// HSE divider
+typedef enum {
+    RCC_PLLXTPRE_DIV1 = 0,
+    RCC_PLLXTPRE_DIV2 = 1,
+} rcc_pllxtpre_t;
+
 // AHB prescaler
 typedef enum {
     RCC_AHB_DIV_1 = 0x00,
@@ -164,6 +170,7 @@ typedef struct {
     rcc_sysclk_t sysclk_source;
     rcc_pllsrc_t pll_source;
     rcc_pllmult_t pll_mult;
+    rcc_pllxtpre_t pll_hse_div;
     rcc_ahb_div_t ahb_div;
     rcc_apb_div_t apb1_div;
     rcc_apb_div_t apb2_div;
@@ -186,5 +193,6 @@ uint32_t rcc_get_apb2_freq(void);
 extern const rcc_clock_config_t RCC_CLOCK_HSI_8MHZ;
 extern const rcc_clock_config_t RCC_CLOCK_HSE_8MHZ;
 extern const rcc_clock_config_t RCC_CLOCK_HSE_PLL_72MHZ;
+extern const rcc_clock_config_t RCC_CLOCK_HSE_44MHZ;
 
 #endif //INC_RCC_H
