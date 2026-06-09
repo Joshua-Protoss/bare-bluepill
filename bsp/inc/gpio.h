@@ -91,10 +91,10 @@ static inline bool gpio_read_pin(GPIO_reg_t *gpio_port, GPIO_pin_t pin){
 
 // toggle pin
 static inline void gpio_toggle_pin(GPIO_reg_t *gpio_port, GPIO_pin_t pin){
-    if(gpio_read_pin(gpio_port, pin)){
-        gpio_write_pin(gpio_port, pin, false);
+    if (gpio_port->ODR & BIT(pin)) {
+        gpio_port->BRR = BIT(pin);
     } else {
-        gpio_write_pin(gpio_port, pin, true);
+        gpio_port->BSRR = BIT(pin);
     }
 }
 
