@@ -8,25 +8,9 @@
 
 volatile uint32_t systick_ticks = 0;
 
-// static void scuffed_delay(uint32_t count) {
-//     volatile uint32_t i;
-//     for (i = 0; i < count; i++){
-//         __asm__("nop");
-//     }
-// } 
-
-static void systick_setup(){
-    uint32_t sysclk = rcc_get_ahb_freq();
-
-    // 1ms tick
-    systick_set_frequency(1000, sysclk);
-    systick_interrupt_disable();
-}
-
-static void systick_delay_ms(uint32_t ms){
-    for (uint32_t i = 0; i < ms; i++) {
-        while(!systick_get_countflag());
-    }
+void gpio_setup(void){
+    rcc_periph_clock_enable(RCC_GPIOC);
+    gpio_set_mode(LED_PORT, LED_PIN, GPIO_MODE_OUTPUT_50MHZ, GPIO_CNF_OUTPUT_PUSHPULL);
 }
 
 void systick_handler(void){
@@ -35,15 +19,19 @@ void systick_handler(void){
 
 int main(void) {
     rcc_clock_configure(&RCC_CLOCK_HSE_44MHZ);
-    //uint32_t sysclk = rcc_get_sysclk_freq();
-    systick_setup();
-    rcc_periph_clock_enable(RCC_GPIOC);
-    gpio_set_mode(LED_PORT, LED_PIN, GPIO_MODE_OUTPUT_50MHZ, GPIO_CNF_OUTPUT_PUSHPULL);
+    gpio_setup();
+    systick_set_frequency(1000, rcc_get_ahb_freq()); // 1ms tick
+
+    uint32_t start_time = systick_ticks;
 
     while(1){
-        gpio_toggle_pin(PORT_GPIOC, PIN_GPIO13);
-        //scuffed_delay(sysclk / 44);
-        systick_delay_ms(1000);
+
+        if (systick_ticks - start_time >= 500) {
+            gpio_toggle_pin(LED_PORT, LED_PIN);
+            start_time = systick_ticks;
+        }
+
+       __asm__("wfi");  // Sleep, save power!
     }
     return 0;
 }
