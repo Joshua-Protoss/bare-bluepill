@@ -22,16 +22,48 @@ int main(void) {
     gpio_setup();
     systick_set_frequency(1000, rcc_get_ahb_freq()); // 1ms tick
 
-    uint32_t start_time = systick_ticks;
+    // PWM parameters
+    uint32_t pwm_period = 20;   // 10ms period (100Hz)
+    uint32_t duty_cycle = 0;    // 0-10 (0% to 100%)
+    int8_t direction = 1;
+    //uint32_t last_tick = 0;
+    //uint32_t on_time;
+    bool led_is_on = false;
+    uint32_t cycle_start = 0;
 
     while(1){
 
-        if (systick_ticks - start_time >= 500) {
-            gpio_toggle_pin(LED_PORT, LED_PIN);
-            start_time = systick_ticks;
+        uint32_t now = systick_ticks;
+        
+        // Start of new PWM cycle
+        if (now - cycle_start >= pwm_period) {
+            cycle_start = now;
+            duty_cycle += direction;
+            
+            // Reverse direction at limits
+            if (duty_cycle >= pwm_period) {
+                direction = -1;
+            } else if (duty_cycle == 0) {
+                direction = 1;
+            }
         }
 
-       __asm__("wfi");  // Sleep, save power!
+        // PWM control
+        uint32_t cycle_time = now - cycle_start;
+        
+        if (cycle_time < duty_cycle) {
+            if (!led_is_on) {
+                gpio_write_pin(LED_PORT, LED_PIN, false);  // ON (active low)
+                led_is_on = true;
+            }
+        } else {
+            if (led_is_on) {
+                gpio_write_pin(LED_PORT, LED_PIN, true);   // OFF
+                led_is_on = false;
+            }
+        }
+        
+        __asm__("wfi");
     }
     return 0;
 }

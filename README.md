@@ -9,10 +9,10 @@
 ✅ GPIO Driver (Output, Push-pull)  
 ✅ RCC Clock Control  
 ✅ Startup Code & Vector Table  
+✅ SysTick  
 ⏳ Input Mode & Pull-up/down  
 ⏳ UART  
 ⏳ Timers  
-⏳ SysTick  
 
 Demo video here: https://youtu.be/WjqHCQbmScI
 
