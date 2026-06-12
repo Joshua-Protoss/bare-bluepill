@@ -67,45 +67,45 @@ typedef struct {
 #define TIM_CR1_URS                             BIT(2)      // Update request source
 #define TIM_CR1_OPM                             BIT(3)      // One pulse mode
 #define TIM_CR1_DIR                             BIT(4)      // Direction (0=up, 1=down)
-#define TIM_CR1_CMS_MASK                        BIT(0x03 << 5) 
-#define TIM_CR1_CMS_EDGE                        BIT(0x00 << 5) // Edge-aligned
-#define TIM_CR1_CMS_CENTER1                     BIT(0x01 << 5) // Center-aligned mode 1
-#define TIM_CR1_CMS_CENTER2                     BIT(0x02 << 5) // Center-aligned mode 2
-#define TIM_CR1_CMS_CENTER3                     BIT(0x03 << 5) // Center-aligned mode 3
+#define TIM_CR1_CMS_MASK                        (0x03 << 5) 
+#define TIM_CR1_CMS_EDGE                        (0x00 << 5) // Edge-aligned
+#define TIM_CR1_CMS_CENTER1                     (0x01 << 5) // Center-aligned mode 1
+#define TIM_CR1_CMS_CENTER2                     (0x02 << 5) // Center-aligned mode 2
+#define TIM_CR1_CMS_CENTER3                     (0x03 << 5) // Center-aligned mode 3
 #define TIM_CR1_ARPE                            BIT(7)         // Auto-reload preload enable
-#define TIM_CR1_CKD_MASK                        BIT(0x03 << 8) 
-#define TIM_CR1_CKD_DIV1                        BIT(0x00 << 8)
-#define TIM_CR1_CKD_DIV2                        BIT(0x01 << 8) 
-#define TIM_CR1_CKD_DIV4                        BIT(0x02 << 8) 
+#define TIM_CR1_CKD_MASK                        (0x03 << 8) 
+#define TIM_CR1_CKD_DIV1                        (0x00 << 8)
+#define TIM_CR1_CKD_DIV2                        (0x01 << 8) 
+#define TIM_CR1_CKD_DIV4                        (0x02 << 8) 
 
 // ===== CCMR1 Bits =====
-#define TIM_CCMR1_CC1S_MASK                     BIT(0x03 << 0)
-#define TIM_CCMR1_CC1S_OUTPUT                   BIT(0x00 << 0)  // output
-#define TIM_CCMR1_CC1S_INPUT_TI1                BIT(0x01 << 0)  // input
-#define TIM_CCMR1_CC1S_INPUT_TI2                BIT(0x02 << 0)
-#define TIM_CCMR1_CC1S_INPUT_TRC                BIT(0x03 << 0)
+#define TIM_CCMR1_CC1S_MASK                     (0x03 << 0)
+#define TIM_CCMR1_CC1S_OUTPUT                   (0x00 << 0)  // output
+#define TIM_CCMR1_CC1S_INPUT_TI1                (0x01 << 0)  // input
+#define TIM_CCMR1_CC1S_INPUT_TI2                (0x02 << 0)
+#define TIM_CCMR1_CC1S_INPUT_TRC                (0x03 << 0)
 #define TIM_CCMR1_OC1FE                         BIT(2) // Output compare 1 fast enable
 #define TIM_CCMR1_OC1PE                         BIT(3) // Output compare 1 preload
-#define TIM_CCMR1_OC1M_MASK                     BIT(0x07 << 4)
-#define TIM_CCMR1_OC1M_FROZEN                   BIT(0x00 << 4)
-#define TIM_CCMR1_OC1M_ACTIVE                   BIT(0x01 << 4)
-#define TIM_CCMR1_OC1M_INACTIVE                 BIT(0x02 << 4)
-#define TIM_CCMR1_OC1M_TOGGLE                   BIT(0x03 << 4)
-#define TIM_CCMR1_OC1M_FORCE_L                  BIT(0x04 << 4)  
-#define TIM_CCMR1_OC1M_FORCE_H                  BIT(0x05 << 4)
-#define TIM_CCMR1_OC1M_PWM1                     BIT(0x06 << 4)
-#define TIM_CCMR1_OC1M_PWM2                     BIT(0x07 << 4)
+#define TIM_CCMR1_OC1M_MASK                     (0x07 << 4)
+#define TIM_CCMR1_OC1M_FROZEN                   (0x00 << 4)
+#define TIM_CCMR1_OC1M_ACTIVE                   (0x01 << 4)
+#define TIM_CCMR1_OC1M_INACTIVE                 (0x02 << 4)
+#define TIM_CCMR1_OC1M_TOGGLE                   (0x03 << 4)
+#define TIM_CCMR1_OC1M_FORCE_L                  (0x04 << 4)  
+#define TIM_CCMR1_OC1M_FORCE_H                  (0x05 << 4)
+#define TIM_CCMR1_OC1M_PWM1                     (0x06 << 4)
+#define TIM_CCMR1_OC1M_PWM2                     (0x07 << 4)
 
 
 // Same for OC2 (bits 8-15), OC3/OC4 in CCMR2
-#define TIM_CCMR1_OC2M_FROZEN                   BIT(0x00 << 12)
-#define TIM_CCMR1_OC2M_ACTIVE                   BIT(0x01 << 12)
-#define TIM_CCMR1_OC2M_INACTIVE                 BIT(0x02 << 12)
-#define TIM_CCMR1_OC2M_TOGGLE                   BIT(0x03 << 12)
-#define TIM_CCMR1_OC2M_FORCE_L                  BIT(0x04 << 12)
-#define TIM_CCMR1_OC2M_FORCE_H                  BIT(0x05 << 12)
-#define TIM_CCMR1_OC2M_PWM1                     BIT(0x06 << 12)     // PWM Mode 1 on CH2
-#define TIM_CCMR1_OC2M_PWM2                     BIT(0x07 << 12)    
+#define TIM_CCMR1_OC2M_FROZEN                   (0x00 << 12)
+#define TIM_CCMR1_OC2M_ACTIVE                   (0x01 << 12)
+#define TIM_CCMR1_OC2M_INACTIVE                 (0x02 << 12)
+#define TIM_CCMR1_OC2M_TOGGLE                   (0x03 << 12)
+#define TIM_CCMR1_OC2M_FORCE_L                  (0x04 << 12)
+#define TIM_CCMR1_OC2M_FORCE_H                  (0x05 << 12)
+#define TIM_CCMR1_OC2M_PWM1                     (0x06 << 12)     // PWM Mode 1 on CH2
+#define TIM_CCMR1_OC2M_PWM2                     (0x07 << 12)    
 
 // ===== CCER Bits =====
 #define TIM_CCER_CC1E                           BIT(0)

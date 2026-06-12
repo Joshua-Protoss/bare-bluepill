@@ -41,29 +41,40 @@ void tim_pwm_init(TIM_reg_t *tim, const tim_pwm_config_t *config, uint32_t tim_c
     tim->ARR = arr;
 
     // Configure PWM mode 1 based on channel
-    uint32_t ccmr_offset = (config->channel <= TIM_CH2) ? 0 : 1;
-    volatile uint32_t *ccmr = (ccmr_offset == 0) ? &tim->CCMR1 : &tim->CCMR2;
-
-    // Shift based on channel (CH1/CH3 = bits 0-7, CH2/CH4 = bits 8-15)
-    uint8_t shift = ((config->channel & 1) == 0) ? 4 : 12;
-
-    // Set PWM mode 1
-    *ccmr &= ~(0x07 << shift);                          // Clear OC mode bits
-    *ccmr |= (TIM_CCMR1_OC1M_PWM1 << (shift - 4));        // Set PWM1
-    *ccmr |= (TIM_CCMR1_OC1PE << (shift - 4 - 1 ));         // Preload enable
+    switch (config->channel) {
+        case TIM_CH1:
+            tim->CCMR1 &= ~TIM_CCMR1_OC1M_MASK;
+            tim->CCMR1 |= TIM_CCMR1_OC1M_PWM1 | TIM_CCMR1_OC1PE;
+            break;
+        case TIM_CH2:
+            tim->CCMR1 &= ~(TIM_CCMR1_OC1M_MASK << 8);  // OC2 bits are +8 from OC1
+            tim->CCMR1 |= TIM_CCMR1_OC2M_PWM1 | (TIM_CCMR1_OC1PE << 8);
+            break;
+        case TIM_CH3:
+            tim->CCMR2 &= ~TIM_CCMR1_OC1M_MASK;  // Same mask works, CCMR2 uses same bit positions
+            tim->CCMR2 |= TIM_CCMR1_OC1M_PWM1 | TIM_CCMR1_OC1PE;
+            break;
+        case TIM_CH4:
+            tim->CCMR2 &= ~(TIM_CCMR1_OC1M_MASK << 8);
+            tim->CCMR2 |= TIM_CCMR1_OC2M_PWM1 | (TIM_CCMR1_OC1PE << 8);
+            break;
+        default:
+            return;
+    }
 
     // Set initial duty cycle
     tim_pwm_set_duty(tim, config->channel, config->duty_cycle);
 
     // Enable output for this channel
-    uint32_t ccer_bit = (config->channel == TIM_CH1) ? TIM_CCER_CC1E :
-                        (config->channel == TIM_CH2) ? TIM_CCER_CC2E :
-                        (config->channel == TIM_CH3) ? TIM_CCER_CC3E :
-                        TIM_CCER_CC4E;
+    switch (config->channel) {
+        case TIM_CH1: tim->CCER |= TIM_CCER_CC1E; break;
+        case TIM_CH2: tim->CCER |= TIM_CCER_CC2E; break;
+        case TIM_CH3: tim->CCER |= TIM_CCER_CC3E; break;
+        case TIM_CH4: tim->CCER |= TIM_CCER_CC4E; break;
+        default: return;
+    }
 
-    tim->CCER |= ccer_bit;
-
-    // Enable auto-reload
+    // Enable auto-reload preload
     tim->CR1 |= TIM_CR1_ARPE;
 
     // Generate update to load prescaler and ARR
