@@ -165,11 +165,29 @@ typedef enum {
     TIM_CH3 = 2,
     TIM_CH4 = 3,
 } tim_channel_t;
-
+// PWM options
 typedef enum {
     TIM_MODE_PWM_CONTINUOUS,   // Regular PWM (runs forever)
     TIM_MODE_PWM_ONE_SHOT,     // One-pulse mode
 } tim_op_mode_t;
+
+typedef enum {
+    TIM_CKD_DIV1 = (0x00 << 8),   // tDTS = tCK_INT
+    TIM_CKD_DIV2 = (0x01 << 8),   // tDTS = 2 × tCK_INT
+    TIM_CKD_DIV4 = (0x02 << 8),   // tDTS = 4 × tCK_INT
+} tim_ckd_t;
+
+typedef enum {
+    TIM_CMS_EDGE    = (0x00 << 5),  // Edge-aligned
+    TIM_CMS_CENTER1 = (0x01 << 5),  // Center-aligned (up-down, interrupt at count=0)
+    TIM_CMS_CENTER2 = (0x02 << 5),  // Center-aligned (interrupt at count=ARR)
+    TIM_CMS_CENTER3 = (0x03 << 5),  // Center-aligned (interrupt at count=0 and ARR)
+} tim_cms_t;
+
+typedef enum {
+    TIM_DIR_UP   = (0 << 4),    // Up-counting
+    TIM_DIR_DOWN = (1 << 4),    // Down-counting
+} tim_dir_t;
 
 // PWM configuration 
 typedef struct {
@@ -178,6 +196,9 @@ typedef struct {
     tim_channel_t channel;      // Which channel to use
     tim_oc_mode_t oc_mode;      // Output compare mode
     tim_op_mode_t op_mode;
+    tim_ckd_t clock_div;      
+    tim_cms_t cms_mode;       
+    tim_dir_t direction;
 } tim_pwm_config_t;
 
 // Function prototypes

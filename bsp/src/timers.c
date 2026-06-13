@@ -36,6 +36,10 @@ void tim_pwm_init(TIM_reg_t *tim, const tim_pwm_config_t *config, uint32_t tim_c
     // Disable counter before configuration
     tim->CR1 &= ~TIM_CR1_CEN;
 
+    // Apply CR1 settings
+    tim->CR1 &= ~(TIM_CR1_CKD_MASK | TIM_CR1_CMS_MASK | TIM_CR1_DIR);
+    tim->CR1 |= config->clock_div | config->cms_mode | config->direction;
+
     // if one pulse mode selected
     if (config->op_mode == TIM_MODE_PWM_ONE_SHOT) {
         tim->CR1 |= TIM_CR1_OPM;  // One Pulse Mode

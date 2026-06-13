@@ -33,7 +33,10 @@ int main(void) {
         .duty_cycle = 50,
         .channel = TIM_CH1,
         .oc_mode = TIM_OC_MODE_PWM1,
-        .op_mode = TIM_MODE_PWM_CONTINUOUS
+        .op_mode = TIM_MODE_PWM_CONTINUOUS,
+        .clock_div = TIM_CKD_DIV1,    // Default
+        .cms_mode = TIM_CMS_EDGE,      // Default
+        .direction = TIM_DIR_UP,       // Default
     };
 
     // TIM2 clock = APB1 frequency × 2
@@ -47,7 +50,11 @@ int main(void) {
         .channel = TIM_CH2,          // ← Channel 2!
         .oc_mode = TIM_OC_MODE_PWM1,
         .op_mode = TIM_MODE_PWM_CONTINUOUS,
+        .clock_div = TIM_CKD_DIV1,    // Default
+        .cms_mode = TIM_CMS_EDGE,      // Default
+        .direction = TIM_DIR_UP,       // Default
     };
+
     tim_pwm_init(TIM2, &ch2_config, tim_clock);
 
     // Sweep duty cycle up and down
