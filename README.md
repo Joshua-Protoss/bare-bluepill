@@ -10,9 +10,7 @@
 ✅ RCC Clock Control  
 ✅ Startup Code & Vector Table  
 ✅ SysTick timer
-
 ✅ General purpose timers for PWM
-
 ⏳ Input Mode & Pull-up/down  
 ⏳ UART  
 ⏳ SPI, I2C, DMA
