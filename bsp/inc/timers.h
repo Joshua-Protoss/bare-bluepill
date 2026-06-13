@@ -1,5 +1,5 @@
-#ifndef INC_TIM_H
-#define INC_TIM_H
+#ifndef INC_TIMERS_H
+#define INC_TIMERS_H
 
 #include "common.h"
 
@@ -45,6 +45,18 @@ typedef struct {
     volatile uint32_t DMAR;
 } TIM_reg_t;
 
+// CCMR Output Compare mode
+typedef enum {
+    TIM_OC_MODE_FROZEN    = (0x00 << 4),     // Output frozen (no change)
+    TIM_OC_MODE_ACTIVE    = (0x01 << 4),     // Set active on match
+    TIM_OC_MODE_INACTIVE  = (0x02 << 4),     // Set inactive on match
+    TIM_OC_MODE_TOGGLE    = (0x03 << 4),     // Toggle on match
+    TIM_OC_MODE_FORCE_L   = (0x04 << 4),     // Force inactive (LOW)
+    TIM_OC_MODE_FORCE_H   = (0x05 << 4),     // Force active (HIGH)
+    TIM_OC_MODE_PWM1      = (0x06 << 4),     // PWM Mode 1
+    TIM_OC_MODE_PWM2      = (0x07 << 4),     // PWM Mode 2
+} tim_oc_mode_t;
+
 // Timer instances
 #define TIM1                                    ((TIM_reg_t *) TIM1_BASE)
 #define TIM2                                    ((TIM_reg_t *) TIM2_BASE)
@@ -80,36 +92,17 @@ typedef struct {
 
 // ===== CCMR1 Bits =====
 #define TIM_CCMR1_CC1S_MASK                     (0x03 << 0)
-#define TIM_CCMR1_CC1S_OUTPUT                   (0x00 << 0)  // output
-#define TIM_CCMR1_CC1S_INPUT_TI1                (0x01 << 0)  // input
+#define TIM_CCMR1_CC1S_OUTPUT                   (0x00 << 0)         // output
+#define TIM_CCMR1_CC1S_INPUT_TI1                (0x01 << 0)         // input
 #define TIM_CCMR1_CC1S_INPUT_TI2                (0x02 << 0)
 #define TIM_CCMR1_CC1S_INPUT_TRC                (0x03 << 0)
-#define TIM_CCMR1_OC1FE                         BIT(2) // Output compare 1 fast enable
-#define TIM_CCMR1_OC1PE                         BIT(3) // Output compare 1 preload
+#define TIM_CCMR1_OC1FE                         BIT(2)              // Output compare 1 fast enable
+#define TIM_CCMR1_OC1PE                         BIT(3)              // Output compare 1 preload
 #define TIM_CCMR1_OC1M_MASK                     (0x07 << 4)
-#define TIM_CCMR1_OC1M_FROZEN                   (0x00 << 4)
-#define TIM_CCMR1_OC1M_ACTIVE                   (0x01 << 4)
-#define TIM_CCMR1_OC1M_INACTIVE                 (0x02 << 4)
-#define TIM_CCMR1_OC1M_TOGGLE                   (0x03 << 4)
-#define TIM_CCMR1_OC1M_FORCE_L                  (0x04 << 4)  
-#define TIM_CCMR1_OC1M_FORCE_H                  (0x05 << 4)
-#define TIM_CCMR1_OC1M_PWM1                     (0x06 << 4)
-#define TIM_CCMR1_OC1M_PWM2                     (0x07 << 4)
-
-
-// Same for OC2 (bits 8-15), OC3/OC4 in CCMR2
-#define TIM_CCMR1_OC2M_FROZEN                   (0x00 << 12)
-#define TIM_CCMR1_OC2M_ACTIVE                   (0x01 << 12)
-#define TIM_CCMR1_OC2M_INACTIVE                 (0x02 << 12)
-#define TIM_CCMR1_OC2M_TOGGLE                   (0x03 << 12)
-#define TIM_CCMR1_OC2M_FORCE_L                  (0x04 << 12)
-#define TIM_CCMR1_OC2M_FORCE_H                  (0x05 << 12)
-#define TIM_CCMR1_OC2M_PWM1                     (0x06 << 12)     // PWM Mode 1 on CH2
-#define TIM_CCMR1_OC2M_PWM2                     (0x07 << 12)    
 
 // ===== CCER Bits =====
 #define TIM_CCER_CC1E                           BIT(0)
-#define TIM_CCER_CC1P                           BIT(1)
+#define TIM_CCER_CC1P                           BIT(1)          // determine wether active means HIGH or LOW
 #define TIM_CCER_CC1NE                          BIT(2)
 #define TIM_CCER_CC1NP                          BIT(3)
 #define TIM_CCER_CC2E                           BIT(4)
@@ -173,11 +166,18 @@ typedef enum {
     TIM_CH4 = 3,
 } tim_channel_t;
 
+typedef enum {
+    TIM_MODE_PWM_CONTINUOUS,   // Regular PWM (runs forever)
+    TIM_MODE_PWM_ONE_SHOT,     // One-pulse mode
+} tim_op_mode_t;
+
 // PWM configuration 
 typedef struct {
     uint32_t frequency;         // Desired PWM frequency
     uint8_t duty_cycle;         // Initial duty cycle (0-100)
-    tim_channel_t channel;       // Which channel to use
+    tim_channel_t channel;      // Which channel to use
+    tim_oc_mode_t oc_mode;      // Output compare mode
+    tim_op_mode_t op_mode;
 } tim_pwm_config_t;
 
 // Function prototypes
@@ -187,4 +187,4 @@ void tim_enable(TIM_reg_t *tim);
 void tim_disable(TIM_reg_t *tim);
 
 
-#endif // INC_TIM_H
+#endif // INC_TIMERS_H

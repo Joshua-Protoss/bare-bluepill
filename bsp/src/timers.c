@@ -1,4 +1,4 @@
-#include "tim.h"
+#include "timers.h"
 
 // Helper: Get CCR register for channel
 static volatile uint32_t *tim_get_ccr(TIM_reg_t *tim, tim_channel_t channel) {
@@ -36,27 +36,36 @@ void tim_pwm_init(TIM_reg_t *tim, const tim_pwm_config_t *config, uint32_t tim_c
     // Disable counter before configuration
     tim->CR1 &= ~TIM_CR1_CEN;
 
+    // if one pulse mode selected
+    if (config->op_mode == TIM_MODE_PWM_ONE_SHOT) {
+        tim->CR1 |= TIM_CR1_OPM;  // One Pulse Mode
+    }
+
     // Set prescaler and auto-reload
     tim->PSC = psc;
     tim->ARR = arr;
 
-    // Configure PWM mode 1 based on channel
+    // Configure selected output compare mode for the channel
     switch (config->channel) {
         case TIM_CH1:
             tim->CCMR1 &= ~TIM_CCMR1_OC1M_MASK;
-            tim->CCMR1 |= TIM_CCMR1_OC1M_PWM1 | TIM_CCMR1_OC1PE;
+            tim->CCMR1 |= config->oc_mode | TIM_CCMR1_OC1PE;
+            tim->CCER |= TIM_CCER_CC1E;
             break;
         case TIM_CH2:
             tim->CCMR1 &= ~(TIM_CCMR1_OC1M_MASK << 8);  // OC2 bits are +8 from OC1
-            tim->CCMR1 |= TIM_CCMR1_OC2M_PWM1 | (TIM_CCMR1_OC1PE << 8);
+            tim->CCMR1 |= (config->oc_mode << 8) | (TIM_CCMR1_OC1PE << 8);
+            tim->CCER |= TIM_CCER_CC2E;
             break;
         case TIM_CH3:
             tim->CCMR2 &= ~TIM_CCMR1_OC1M_MASK;  // Same mask works, CCMR2 uses same bit positions
-            tim->CCMR2 |= TIM_CCMR1_OC1M_PWM1 | TIM_CCMR1_OC1PE;
+            tim->CCMR2 |= config->oc_mode | TIM_CCMR1_OC1PE;
+            tim->CCER |= TIM_CCER_CC3E;
             break;
         case TIM_CH4:
             tim->CCMR2 &= ~(TIM_CCMR1_OC1M_MASK << 8);
-            tim->CCMR2 |= TIM_CCMR1_OC2M_PWM1 | (TIM_CCMR1_OC1PE << 8);
+            tim->CCMR2 |= (config->oc_mode << 8) | (TIM_CCMR1_OC1PE << 8);
+            tim->CCER |= TIM_CCER_CC4E;
             break;
         default:
             return;
@@ -64,15 +73,6 @@ void tim_pwm_init(TIM_reg_t *tim, const tim_pwm_config_t *config, uint32_t tim_c
 
     // Set initial duty cycle
     tim_pwm_set_duty(tim, config->channel, config->duty_cycle);
-
-    // Enable output for this channel
-    switch (config->channel) {
-        case TIM_CH1: tim->CCER |= TIM_CCER_CC1E; break;
-        case TIM_CH2: tim->CCER |= TIM_CCER_CC2E; break;
-        case TIM_CH3: tim->CCER |= TIM_CCER_CC3E; break;
-        case TIM_CH4: tim->CCER |= TIM_CCER_CC4E; break;
-        default: return;
-    }
 
     // Enable auto-reload preload
     tim->CR1 |= TIM_CR1_ARPE;
