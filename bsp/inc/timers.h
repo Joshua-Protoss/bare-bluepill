@@ -165,6 +165,7 @@ typedef enum {
     TIM_CH3 = 2,
     TIM_CH4 = 3,
 } tim_channel_t;
+
 // PWM options
 typedef enum {
     TIM_MODE_PWM_CONTINUOUS,   // Regular PWM (runs forever)

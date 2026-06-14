@@ -79,7 +79,8 @@
 
 // Bit positions for APB1 peripherals
 #define RCC_TIM2_BIT             0
-#define RCC_TIM3_BIT             1        
+#define RCC_TIM3_BIT             1 
+#define RCC_USART1_BIT           14       
 #define RCC_USART2_BIT           17
 
 // encoded clock enable values
@@ -91,6 +92,7 @@ enum rcc_periph_clken {
     // APB1 peripherals
     RCC_TIM2 = RCC_ENCODE(RCC_APB1_ENR_OFFSET, RCC_TIM2_BIT),
     RCC_TIM3 = RCC_ENCODE(RCC_APB1_ENR_OFFSET, RCC_TIM3_BIT),
+    RCC_USART1 = RCC_ENCODE(RCC_APB2_ENR_OFFSET, RCC_USART1_BIT),
     RCC_USART2 = RCC_ENCODE(RCC_APB1_ENR_OFFSET, RCC_USART2_BIT),
 
     // APB2 peripherals

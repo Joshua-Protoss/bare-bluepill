@@ -3,6 +3,7 @@
 #include "gpio.h"
 #include "systick.h"
 #include "timers.h"
+#include "usart.h"
 
 #define LED_PORT         (PORT_GPIOA)       // this is an external LED connected to PA0
 #define LED_PIN          (PIN_GPIO0)
@@ -26,6 +27,20 @@ int main(void) {
     rcc_clock_configure(&RCC_CLOCK_HSE_44MHZ);
     gpio_setup();
     systick_set_frequency(1000, rcc_get_ahb_freq()); // 1ms tick
+
+    // USART Setup
+    rcc_periph_clock_enable(RCC_USART1);
+    // PA9 = TX (AF push-pull)
+    gpio_set_mode(PORT_GPIOA, PIN_GPIO9, GPIO_MODE_OUTPUT_50MHZ, GPIO_CNF_OUTPUT_AF_PUSHPULL);
+    // PA10 = RX (floating input)
+    gpio_set_mode(PORT_GPIOA, PIN_GPIO10, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOATING);
+    // Configure USART1
+    //uint32_t apb2_clock = rcc_get_apb2_freq();  // 44MHz
+    USART1->BRR = (44000000 / 115200); // Baud rate
+    USART1->CR1 |= USART_CR1_UE | USART_CR1_TE | USART_CR1_RE;
+    // Send a character
+    USART1->DR = 'A';
+    while(!(USART1->SR & USART_SR_TC));
 
     // PWM configuration: 1kHz, 50% duty cycle on CH1
     tim_pwm_config_t pwm_config = {
