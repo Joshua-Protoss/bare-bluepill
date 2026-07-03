@@ -43,9 +43,9 @@ const rcc_clock_config_t RCC_CLOCK_HSE_44MHZ = {
     .pll_source = RCC_PLLSRC_HSE,
     .pll_mult = RCC_PLLMULT_11,
     .pll_hse_div = RCC_PLLXTPRE_DIV2,   // 8MHz / 2 = 4MHz input
-    .ahb_div = RCC_AHB_DIV_1,          // 44MHz AHB
-    .apb1_div = RCC_APB_DIV_2,         // 22MHz APB1 (max 36MHz)
-    .apb2_div = RCC_APB_DIV_1,         // 44MHz APB2
+    .ahb_div = RCC_AHB_DIV_1,           // 44MHz AHB
+    .apb1_div = RCC_APB_DIV_2,          // 22MHz APB1 (max 36MHz)
+    .apb2_div = RCC_APB_DIV_1,          // 44MHz APB2
 };
 
 // ===== RCC CLOCK CONFIGURATION FUNCTIONS =====

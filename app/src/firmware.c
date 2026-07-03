@@ -23,54 +23,32 @@ void systick_handler(void){
     systick_ticks++;
 }
 
-int main(void) {
-    rcc_clock_configure(&RCC_CLOCK_HSE_44MHZ);
-    gpio_setup();
-    systick_set_frequency(1000, rcc_get_ahb_freq()); // 1ms tick
-
+void uart_setup(){
     // USART Setup
     rcc_periph_clock_enable(RCC_USART1);
     // PA9 = TX (AF push-pull)
     gpio_set_mode(PORT_GPIOA, PIN_GPIO9, GPIO_MODE_OUTPUT_50MHZ, GPIO_CNF_OUTPUT_AF_PUSHPULL);
     // PA10 = RX (floating input)
     gpio_set_mode(PORT_GPIOA, PIN_GPIO10, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOATING);
-    // Configure USART1
-    //uint32_t apb2_clock = rcc_get_apb2_freq();  // 44MHz
-    USART1->BRR = (44000000 / 115200); // Baud rate
-    USART1->CR1 |= USART_CR1_UE | USART_CR1_TE | USART_CR1_RE;
-    // Send a character
-    USART1->DR = 'A';
-    while(!(USART1->SR & USART_SR_TC));
 
-    // PWM configuration: 1kHz, 50% duty cycle on CH1
-    tim_pwm_config_t pwm_config = {
-        .frequency = 1000,
-        .duty_cycle = 50,
-        .channel = TIM_CH1,
-        .oc_mode = TIM_OC_MODE_PWM1,
-        .op_mode = TIM_MODE_PWM_CONTINUOUS,
-        .clock_div = TIM_CKD_DIV1,    // Default
-        .cms_mode = TIM_CMS_EDGE,      // Default
-        .direction = TIM_DIR_UP,       // Default
-    };
+    // Configure USART1
+    usart_init(USART1, 115200, &USART1_TX_RX_8);    // the function will automatically compute the correct BRR for 44MHz
+
+    // Send a character
+    for (volatile uint32_t i = 0; i < 1000000; i++);
+    usart_send_char(USART1, 'A');
+}
+
+int main(void) {
+    rcc_clock_configure(&RCC_CLOCK_HSE_44MHZ);
+    gpio_setup();
+    systick_set_frequency(1000, rcc_get_ahb_freq()); // 1ms tick
+    uart_setup();
 
     // TIM2 clock = APB1 frequency × 2
     uint32_t tim_clock = rcc_get_apb1_freq() * 2;
-    tim_pwm_init(TIM2, &pwm_config, tim_clock);
-
-    // CH2: LED2 fading out (opposite phase)
-    tim_pwm_config_t ch2_config = {
-        .frequency = 1000,
-        .duty_cycle = 50,
-        .channel = TIM_CH2,          // ← Channel 2!
-        .oc_mode = TIM_OC_MODE_PWM1,
-        .op_mode = TIM_MODE_PWM_CONTINUOUS,
-        .clock_div = TIM_CKD_DIV1,    // Default
-        .cms_mode = TIM_CMS_EDGE,      // Default
-        .direction = TIM_DIR_UP,       // Default
-    };
-
-    tim_pwm_init(TIM2, &ch2_config, tim_clock);
+    tim_pwm_init(TIM2, &PWM_CH1_1KHZ_50, tim_clock);    // channel 1
+    tim_pwm_init(TIM2, &PWM_CH2_1KHZ_50, tim_clock);    // channel 2 PWM
 
     // Sweep duty cycle up and down
     int8_t duty = 0;

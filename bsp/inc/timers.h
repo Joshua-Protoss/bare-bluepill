@@ -208,5 +208,7 @@ void tim_pwm_set_duty(TIM_reg_t *tim, tim_channel_t channel, uint8_t duty_percen
 void tim_enable(TIM_reg_t *tim);
 void tim_disable(TIM_reg_t *tim);
 
+extern const tim_pwm_config_t PWM_CH1_1KHZ_50;
+extern const tim_pwm_config_t PWM_CH2_1KHZ_50;
 
 #endif // INC_TIMERS_H

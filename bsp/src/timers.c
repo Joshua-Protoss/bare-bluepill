@@ -107,3 +107,27 @@ void tim_enable(TIM_reg_t *tim){
 void tim_disable(TIM_reg_t *tim){
     tim->CR1 &= ~TIM_CR1_CEN;
 }
+
+// PWM configuration: 1kHz, 50% duty cycle on CH1
+const tim_pwm_config_t PWM_CH1_1KHZ_50 = {
+        .frequency = 1000,
+        .duty_cycle = 50,
+        .channel = TIM_CH1,
+        .oc_mode = TIM_OC_MODE_PWM1,
+        .op_mode = TIM_MODE_PWM_CONTINUOUS,
+        .clock_div = TIM_CKD_DIV1,    // Default
+        .cms_mode = TIM_CMS_EDGE,      // Default
+        .direction = TIM_DIR_UP,       // Default
+};
+
+// CH2: LED2 fading out (opposite phase)
+const tim_pwm_config_t PWM_CH2_1KHZ_50 = {
+        .frequency = 1000,
+        .duty_cycle = 50,
+        .channel = TIM_CH2,          // ← Channel 2!
+        .oc_mode = TIM_OC_MODE_PWM1,
+        .op_mode = TIM_MODE_PWM_CONTINUOUS,
+        .clock_div = TIM_CKD_DIV1,    // Default
+        .cms_mode = TIM_CMS_EDGE,      // Default
+        .direction = TIM_DIR_UP,       // Default
+};
