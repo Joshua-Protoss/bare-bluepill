@@ -6,6 +6,7 @@ void usart_init(volatile usart_reg_t *usart, uint32_t baud_rate, const usart_con
     // calculate apb_clock
     uint32_t apb_clock = (usart == USART1) ? rcc_get_apb2_freq() : rcc_get_apb1_freq();
     usart->BRR = (apb_clock + (baud_rate / 2)) / baud_rate;
+    //usart->BRR = (44000000 / baud_rate);
 
     // Configure stopbits at CR2
     usart->CR2 = config->stopbits;
@@ -17,14 +18,37 @@ void usart_init(volatile usart_reg_t *usart, uint32_t baud_rate, const usart_con
     usart->CR1 = USART_CR1_UE | config->mode | config->databits | config->parity;
 }
 
-void usart_send_char(volatile usart_reg_t *usart, uint16_t data) {
-    while(!(usart->SR & USART_SR_TXE)); // Wait for TX buffer empty
+void usart_write_DR(volatile usart_reg_t *usart, uint16_t data) {
+    while(!(usart->SR & USART_SR_TXE));             // Wait for TX buffer empty
     usart->DR = data;
 }
 
-const usart_config_t USART1_TX_RX_8 = {
+void usart_write(volatile usart_reg_t *usart, const uint8_t *data, const uint32_t length){
+    for (uint32_t i = 0; i < length; i++){
+        usart_write_DR(usart, (uint16_t) data[i]);
+    }
+}
+
+uint16_t usart_read_DR(volatile usart_reg_t *usart){
+    while(!(usart->SR & USART_SR_RXNE));           // Wait for RX buffer received data
+    return usart->DR & USART_DR_MASK;              // read only the 16 bits of DR register
+}
+
+bool usart_rx_available(volatile usart_reg_t *usart) {
+    return (usart->SR & USART_SR_RXNE) != 0;
+}
+
+const usart_config_t USART1_TX_RX_8BIT = {
     .mode = USART_CR1_TE | USART_CR1_RE,
     .databits = 0x00,
+    .parity = 0x00,
+    .stopbits = 0x00,
+    .flow_control = 0x00,
+};
+
+const usart_config_t USART1_TX_RX_9BIT = {
+    .mode = USART_CR1_TE | USART_CR1_RE,
+    .databits = USART_DATABITS_9,
     .parity = 0x00,
     .stopbits = 0x00,
     .flow_control = 0x00,

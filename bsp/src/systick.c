@@ -78,6 +78,5 @@ void systick_clear_counter(void){
 }
 
 uint32_t systick_get_calib(void){
-
     return (SYSTICK->SYST_CALIB & SYSTICK_CALIB_TENMS);
 }

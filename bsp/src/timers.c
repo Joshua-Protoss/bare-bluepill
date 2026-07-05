@@ -1,7 +1,7 @@
 #include "timers.h"
 
 // Helper: Get CCR register for channel
-static volatile uint32_t *tim_get_ccr(TIM_reg_t *tim, tim_channel_t channel) {
+static volatile uint32_t *tim_get_ccr(volatile TIM_reg_t *tim, tim_channel_t channel) {
     switch (channel) {
         case TIM_CH1: return &tim->CCR1;
         case TIM_CH2: return &tim->CCR2;
@@ -25,7 +25,7 @@ static bool tim_calculate_prescaler_arr(uint32_t tim_clock, uint32_t desired_fre
     return false; // Cannot achieve this frequency
 }
 
-void tim_pwm_init(TIM_reg_t *tim, const tim_pwm_config_t *config, uint32_t tim_clock) {
+void tim_pwm_init(volatile TIM_reg_t *tim, const tim_pwm_config_t *config, uint32_t tim_clock) {
     uint32_t psc, arr;
 
     // pre-calculate prescaler and auto-reload
@@ -88,7 +88,7 @@ void tim_pwm_init(TIM_reg_t *tim, const tim_pwm_config_t *config, uint32_t tim_c
     tim->CR1 |= TIM_CR1_CEN;
 }
 
-void tim_pwm_set_duty(TIM_reg_t *tim, tim_channel_t channel, uint8_t duty_cycle) {
+void tim_pwm_set_duty(volatile TIM_reg_t *tim, tim_channel_t channel, uint8_t duty_cycle) {
     if (duty_cycle > 100) {
         duty_cycle = 100;
     }
@@ -100,11 +100,11 @@ void tim_pwm_set_duty(TIM_reg_t *tim, tim_channel_t channel, uint8_t duty_cycle)
     *ccr = ccr_value;
 }
 
-void tim_enable(TIM_reg_t *tim){
+void tim_enable(volatile TIM_reg_t *tim){
     tim->CR1 |= TIM_CR1_CEN;
 }
 
-void tim_disable(TIM_reg_t *tim){
+void tim_disable(volatile TIM_reg_t *tim){
     tim->CR1 &= ~TIM_CR1_CEN;
 }
 

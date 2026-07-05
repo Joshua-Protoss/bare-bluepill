@@ -32,11 +32,14 @@ void uart_setup(){
     gpio_set_mode(PORT_GPIOA, PIN_GPIO10, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOATING);
 
     // Configure USART1
-    usart_init(USART1, 115200, &USART1_TX_RX_8);    // the function will automatically compute the correct BRR for 44MHz
+    usart_init(USART1, 115200, &USART1_TX_RX_8BIT);    // the function will automatically compute the correct BRR for 44MHz
 
-    // Send a character
+    // send data
+    // Wait until TC (Transmission Complete) bit is set by hardware
+    //usart_write_DR(USART1, 'A');
+    //while(!(USART1->SR & USART_SR_TC));
     for (volatile uint32_t i = 0; i < 1000000; i++);
-    usart_send_char(USART1, 'A');
+    usart_write(USART1, (uint8_t*) "Hello!\r\n", 8);
 }
 
 int main(void) {
@@ -70,7 +73,10 @@ int main(void) {
             
             tim_pwm_set_duty(TIM2, TIM_CH1, duty);
             tim_pwm_set_duty(TIM2, TIM_CH2, 100 - duty);  // LED2: 100→0 (opposite!)
+
         }
+        
+        // Send a character
         
        __asm__("wfi");  // Sleep, save power!
     }

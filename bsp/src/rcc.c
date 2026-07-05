@@ -97,11 +97,13 @@ void rcc_clock_configure(const rcc_clock_config_t *config){
             break;
         case RCC_SYSCLK_PLL:
             if(config->pll_source == RCC_PLLSRC_HSE) {
+
                 uint32_t pll_input = config->hse_freq_hz;
                 if (config->pll_hse_div == RCC_PLLXTPRE_DIV2) {
                     pll_input /= 2;             // HSE frequency divided by 2 
                 }
                 new_sysclk_freq = pll_input * (config->pll_mult + 2);
+
             } else {
                 new_sysclk_freq = (config->hsi_freq_hz / 2) * (config->pll_mult + 2);
             }
@@ -197,7 +199,13 @@ uint32_t rcc_get_sysclk_freq(void){
             return rcc_current_config.hse_freq_hz;
         case RCC_SYSCLK_PLL:
             if(rcc_current_config.pll_source == RCC_PLLSRC_HSE) {
-                return rcc_current_config.hse_freq_hz * (rcc_current_config.pll_mult + 2);
+                uint32_t pll_input = rcc_current_config.hse_freq_hz;
+
+                // Apply HSE divider if configured
+                if (rcc_current_config.pll_hse_div == RCC_PLLXTPRE_DIV2) {
+                    pll_input /= 2;
+                }
+                return pll_input * (rcc_current_config.pll_mult + 2);
             } else {
                 return (rcc_current_config.hsi_freq_hz / 2) * (rcc_current_config.pll_mult + 2);
             }
@@ -208,7 +216,6 @@ uint32_t rcc_get_sysclk_freq(void){
 }
 
 uint32_t rcc_get_ahb_freq(void){
-
     return rcc_get_sysclk_freq() / ahb_div_to_value(rcc_current_config.ahb_div);
 }
 

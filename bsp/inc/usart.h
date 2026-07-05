@@ -21,16 +21,22 @@ typedef struct {
 #define USART2                   ((volatile usart_reg_t *) USART2_BASE)
 #define USART3                   ((volatile usart_reg_t *) USART3_BASE)
 
-// USART bit positions
+// USART bit positions & masks
 #define USART_CR1_UE             BIT(13)
 #define USART_CR1_TE             BIT(3)
 #define USART_CR1_RE             BIT(2)
 #define USART_CR1_PCE            BIT(10)     // Parity control enable
 #define USART_CR1_M              BIT(12)     // databits 0 : 8 data bits, 1 : 9 data bits
 
-#define USART_SR_RXNE            BIT(5)   // RX not empty (data available)
+#define USART_SR_RXNE            BIT(5)      // RX not empty (data available)
 #define USART_SR_TC              BIT(6)
-#define USART_SR_TXE             BIT(7)   // TX empty (ready for next byte)
+#define USART_SR_TXE             BIT(7)      // TX empty (ready for next byte)
+
+#define USART_DR_MASK            0x1FFU      // the first 8 bits
+
+// CR1 word length definitions
+#define USART_DATABITS_8         0x00
+#define USART_DATABITS_9         BIT(12)
 
 // USART Configuration struct
 typedef struct {
@@ -43,8 +49,11 @@ typedef struct {
 
 // function prototypes
 void usart_init(volatile usart_reg_t *usart, uint32_t baud_rate, const usart_config_t *config);
-void usart_send_char(volatile usart_reg_t *usart, uint16_t data);
+void usart_write_DR(volatile usart_reg_t *usart, uint16_t data);
+void usart_write(volatile usart_reg_t *usart, const uint8_t *data, const uint32_t length);
+uint16_t usart_read_DR(volatile usart_reg_t *usart);
+bool usart_rx_available(volatile usart_reg_t *usart);
 
-extern const usart_config_t USART1_TX_RX_8;
+extern const usart_config_t USART1_TX_RX_8BIT;
 
 #endif // INC_USART_H

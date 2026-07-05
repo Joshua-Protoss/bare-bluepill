@@ -58,20 +58,20 @@ typedef enum {
 } tim_oc_mode_t;
 
 // Timer instances
-#define TIM1                                    ((TIM_reg_t *) TIM1_BASE)
-#define TIM2                                    ((TIM_reg_t *) TIM2_BASE)
-#define TIM3                                    ((TIM_reg_t *) TIM3_BASE)
-#define TIM4                                    ((TIM_reg_t *) TIM4_BASE)
-#define TIM5                                    ((TIM_reg_t *) TIM5_BASE)
-#define TIM6                                    ((TIM_reg_t *) TIM6_BASE)
-#define TIM7                                    ((TIM_reg_t *) TIM7_BASE)
-#define TIM8                                    ((TIM_reg_t *) TIM8_BASE)
-#define TIM9                                    ((TIM_reg_t *) TIM9_BASE)
-#define TIM10                                   ((TIM_reg_t *) TIM10_BASE)
-#define TIM11                                   ((TIM_reg_t *) TIM11_BASE)
-#define TIM12                                   ((TIM_reg_t *) TIM12_BASE)
-#define TIM13                                   ((TIM_reg_t *) TIM13_BASE)
-#define TIM14                                   ((TIM_reg_t *) TIM14_BASE)
+#define TIM1                                    ((volatile TIM_reg_t *) TIM1_BASE)
+#define TIM2                                    ((volatile TIM_reg_t *) TIM2_BASE)
+#define TIM3                                    ((volatile TIM_reg_t *) TIM3_BASE)
+#define TIM4                                    ((volatile TIM_reg_t *) TIM4_BASE)
+#define TIM5                                    ((volatile TIM_reg_t *) TIM5_BASE)
+#define TIM6                                    ((volatile TIM_reg_t *) TIM6_BASE)
+#define TIM7                                    ((volatile TIM_reg_t *) TIM7_BASE)
+#define TIM8                                    ((volatile TIM_reg_t *) TIM8_BASE)
+#define TIM9                                    ((volatile TIM_reg_t *) TIM9_BASE)
+#define TIM10                                   ((volatile TIM_reg_t *) TIM10_BASE)
+#define TIM11                                   ((volatile TIM_reg_t *) TIM11_BASE)
+#define TIM12                                   ((volatile TIM_reg_t *) TIM12_BASE)
+#define TIM13                                   ((volatile TIM_reg_t *) TIM13_BASE)
+#define TIM14                                   ((volatile TIM_reg_t *) TIM14_BASE)
 
 // ===== CR1 Bits =====         
 #define TIM_CR1_CEN                             BIT(0)      // Counter enable
@@ -203,10 +203,10 @@ typedef struct {
 } tim_pwm_config_t;
 
 // Function prototypes
-void tim_pwm_init(TIM_reg_t *tim, const tim_pwm_config_t * config, uint32_t tim_clock_hz);
-void tim_pwm_set_duty(TIM_reg_t *tim, tim_channel_t channel, uint8_t duty_percent);
-void tim_enable(TIM_reg_t *tim);
-void tim_disable(TIM_reg_t *tim);
+void tim_pwm_init(volatile TIM_reg_t *tim, const tim_pwm_config_t * config, uint32_t tim_clock_hz);
+void tim_pwm_set_duty(volatile TIM_reg_t *tim, tim_channel_t channel, uint8_t duty_percent);
+void tim_enable(volatile TIM_reg_t *tim);
+void tim_disable(volatile TIM_reg_t *tim);
 
 extern const tim_pwm_config_t PWM_CH1_1KHZ_50;
 extern const tim_pwm_config_t PWM_CH2_1KHZ_50;

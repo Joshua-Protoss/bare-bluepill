@@ -4,7 +4,7 @@
 #include "common.h"
 
 // Offsets and peripheral memory addresses
-#define SYSTICK_BASE                             (0xE000E010)
+#define SYSTICK_BASE                             (0xE000E010U)
 #define SYSTICK_RELOAD_MAX                       (0x00FFFFFFU)
 #define SYSTICK_CURRENT_VALUE_MASK               (0x00FFFFFFU)
 #define SYSTICK_CALIB_TENMS                      (0x00FFFFFFU)
