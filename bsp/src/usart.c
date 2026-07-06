@@ -6,7 +6,7 @@ void usart_init(volatile usart_reg_t *usart, uint32_t baud_rate, const usart_con
     // calculate apb_clock
     uint32_t apb_clock = (usart == USART1) ? rcc_get_apb2_freq() : rcc_get_apb1_freq();
     usart->BRR = (apb_clock + (baud_rate / 2)) / baud_rate;
-    //usart->BRR = (44000000 / baud_rate);
+    //usart->BRR = (44000000 / baud_rate); there was a problem with rcc_get_sysclk_freq()
 
     // Configure stopbits at CR2
     usart->CR2 = config->stopbits;

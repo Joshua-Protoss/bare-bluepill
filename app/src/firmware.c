@@ -10,7 +10,19 @@
 #define LED2_PORT        (PORT_GPIOA) 
 #define LED2_PIN         (PIN_GPIO1)       // TIM2_CH2
 
+#define RX_BUFF_SIZE        64
 volatile uint32_t systick_ticks = 0;
+
+static uint8_t rx_buffer[RX_BUFF_SIZE];
+static uint8_t rx_index = 0;
+
+// Pre-defined messages as uint8_t arrays
+static const uint8_t msg_welcome[] = "Blue Pill Echo Terminal\r\n";
+static const uint8_t msg_prompt[]  = "Type something and press Enter:\r\n";
+static const uint8_t msg_prefix[]  = "\r\nYou typed: ";
+static const uint8_t msg_suffix[]  = "\r\n> ";
+static const uint8_t msg_newline[] = "\r\n";
+static const uint8_t msg_prompt2[] = "> ";
 
 void gpio_setup(void){
     rcc_periph_clock_enable(RCC_GPIOA);
@@ -34,12 +46,17 @@ void uart_setup(){
     // Configure USART1
     usart_init(USART1, 115200, &USART1_TX_RX_8BIT);    // the function will automatically compute the correct BRR for 44MHz
 
-    // send data
-    // Wait until TC (Transmission Complete) bit is set by hardware
-    //usart_write_DR(USART1, 'A');
-    //while(!(USART1->SR & USART_SR_TC));
+    // startup messages
     for (volatile uint32_t i = 0; i < 1000000; i++);
-    usart_write(USART1, (uint8_t*) "Hello!\r\n", 8);
+    usart_write(USART1, msg_welcome, sizeof(msg_welcome) - 1);
+    usart_write(USART1, msg_prompt, sizeof(msg_prompt) - 1);
+    usart_write(USART1, msg_prompt2, sizeof(msg_prompt2) - 1);
+}
+
+void process_line(const uint8_t *line, uint8_t length) {
+    usart_write(USART1, msg_prefix, sizeof(msg_prefix) - 1);
+    usart_write(USART1, line, length);
+    usart_write(USART1, msg_suffix, sizeof(msg_suffix) - 1);
 }
 
 int main(void) {
@@ -60,7 +77,26 @@ int main(void) {
 
     while(1){
 
-        // Update duty cycle every 10ms
+        // === UART Echo ===
+        if (usart_rx_available(USART1)) {
+            uint8_t c = ((uint8_t)usart_read_DR(USART1));
+            if (c == '\r' || c == '\n') {
+                // Enter pressed
+                if (rx_index > 0) {
+                    process_line(rx_buffer, rx_index);
+                } else {
+                    usart_write(USART1, msg_newline, sizeof(msg_newline) - 1);
+                    usart_write(USART1, msg_prompt2, sizeof(msg_prompt2) - 1);
+                }
+                rx_index = 0;
+            } else if (rx_index < RX_BUFF_SIZE - 1) {
+                // Normal character
+                rx_buffer[rx_index++] = c;
+                usart_write_DR(USART1, c);
+            }
+        }
+
+        // PWM : Update duty cycle every 10ms
         if (systick_ticks - last_update >= 10) {
             last_update = systick_ticks;
             
