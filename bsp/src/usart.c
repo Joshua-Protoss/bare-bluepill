@@ -38,6 +38,15 @@ bool usart_rx_available(volatile usart_reg_t *usart) {
     return (usart->SR & USART_SR_RXNE) != 0;
 }
 
+void usart_write_string(volatile usart_reg_t *usart, const char *str){
+    while(*str) {
+        if (*str == '\n') {
+            usart_write_DR(usart, '\r');         // Auto add CR before LF
+        }
+        usart_write_DR(usart, (uint16_t) *str++);
+    }
+}
+
 const usart_config_t USART1_TX_RX_8BIT = {
     .mode = USART_CR1_TE | USART_CR1_RE,
     .databits = 0x00,

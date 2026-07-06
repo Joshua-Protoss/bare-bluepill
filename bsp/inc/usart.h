@@ -53,6 +53,7 @@ void usart_write_DR(volatile usart_reg_t *usart, uint16_t data);
 void usart_write(volatile usart_reg_t *usart, const uint8_t *data, const uint32_t length);
 uint16_t usart_read_DR(volatile usart_reg_t *usart);
 bool usart_rx_available(volatile usart_reg_t *usart);
+void usart_write_string(volatile usart_reg_t *usart, const char *str);
 
 extern const usart_config_t USART1_TX_RX_8BIT;
 
