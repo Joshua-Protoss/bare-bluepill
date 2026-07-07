@@ -1,6 +1,24 @@
 #ifndef INC_NVIC_H
 #define INC_NVIC_H
 
+#include "common.h"
+
+// NVIC base address 
+#define NVIC_BASE                0xE000E100U            // 0xE000E100-0xE000E4EF NVIC : PM0056 programming manual stm32f10xx table 33.
+#define NVIC_IPR_BASE            (NVIC_BASE + 0x300U)   // 0xE000E400- 0xE000E4EF Interrupt Priority Registers NVIC_IPR0-NVIC_IPR59 : Cortex M3 generic user guide
+// While each IRQ has an 8-bit priority field, STMicroelectronics only implemented the 4 HIGHEST bits (bits [7:4]) of each byte. 
+// NVIC_IPR0 (0xE000E400): Controls IRQ 0, IRQ 1, IRQ 2, IRQ 3 || NVIC_IPR1 (0xE000E404): Controls IRQ 4, IRQ 5, IRQ 6, IRQ 7
+// The lower 4 bits (bits [3:0]) are hardwired to zero and ignored. This means you have 16 programmable priority levels (0 to 15). 0 is the highest priority; 15 is the lowest priority.
+// Register index = IRQ / 4 , Byte Offset = IRQ (mod 4). For USART1 : (IRQ 37) / 4 = 9 (This means it is inside register NVIC_IPR9), 37 mod 4 = 1, this means the 2nd byte bits [15:8] (first byte is 7:0)
+// Absolute Memory Address: 0xE000E400 + (9 * 4) = 0xE000E424
+
+// NVIC Registers               Cortex-M3 Generic Userguide
+#define NVIC_ISER0               REG32(NVIC_BASE + 0x000)    // Interrupt Set Enable 0 (IRQ 0-31)
+#define NVIC_ISER1               REG32(NVIC_BASE + 0x004)    // Interrupt Set Enable 1 (IRQ 32-63)
+#define NVIC_ICER0               REG32(NVIC_BASE + 0x080)    // Interrupt Clear Enable 0
+#define NVIC_ICER1               REG32(NVIC_BASE + 0x084)    // Interrupt Clear Enable 1
+
+// IRQ numbers
 #define NVIC_WWDG_IRQ            0
 #define NVIC_PVD_IRQ             1
 #define NVIC_TAMPER_IRQ          2
@@ -68,6 +86,12 @@ void nvic_can_tx_isr(void);
 void nvic_can_rx0_isr(void);
 void nvic_can_rx1_isr(void);
 void nvic_can_sce_isr(void);
+
+// Function prototypes
+void nvic_enable_irq(uint8_t irq_number);
+void nvic_disable_irq(uint8_t irq_number);
+void nvic_set_priority(uint8_t irq_number, uint8_t priority);
+
 #endif // INC_NVIC_H
 
 ///c/gcc-arm-none-eabi/bin/arm-none-eabi-objdump -d firmware.elf | less

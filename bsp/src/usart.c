@@ -1,5 +1,6 @@
 #include "usart.h"
 #include "rcc.h"
+#include "nvic.h"
 
 void usart_init(volatile usart_reg_t *usart, uint32_t baud_rate, const usart_config_t *config){
 
@@ -47,8 +48,31 @@ void usart_write_string(volatile usart_reg_t *usart, const char *str){
     }
 }
 
-void usart_rx_interrupt_enable(volatile usart_reg_t *usart);
-void usart_rx_interrupt_disable(volatile usart_reg_t *usart);
+void usart_rx_interrupt_enable(volatile usart_reg_t *usart){
+    usart->CR1 |= USART_CR1_RXNEIE;         // enable usart rx interrupt
+    
+    // enable nvic
+    if (usart == USART1) {
+        nvic_enable_irq(NVIC_USART1_IRQ);
+    } else if (usart == USART2) {
+        nvic_enable_irq(NVIC_USART2_IRQ);
+    } else if (usart == USART3) {
+        nvic_enable_irq(NVIC_USART3_IRQ);
+    }
+}
+
+void usart_rx_interrupt_disable(volatile usart_reg_t *usart){
+    usart->CR1 &= ~USART_CR1_RXNEIE;
+
+    // disable nvic
+    if (usart == USART1) {
+        nvic_disable_irq(NVIC_USART1_IRQ);
+    } else if (usart == USART2) {
+        nvic_disable_irq(NVIC_USART2_IRQ);
+    } else if (usart == USART3) {
+        nvic_disable_irq(NVIC_USART3_IRQ);
+    }
+}
 
 const usart_config_t USART1_TX_RX_8BIT = {
     .mode = USART_CR1_TE | USART_CR1_RE,
