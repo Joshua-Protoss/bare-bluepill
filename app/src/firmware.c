@@ -13,8 +13,16 @@
 #define RX_BUFF_SIZE        64
 volatile uint32_t systick_ticks = 0;
 
-static char rx_buffer[RX_BUFF_SIZE];
+static uint8_t rx_buffer[RX_BUFF_SIZE];
 static uint8_t rx_index = 0;
+
+// Pre-defined messages as uint8_t arrays
+static const uint8_t msg_welcome[] = "Blue Pill Echo Terminal\r\n";
+static const uint8_t msg_prompt[]  = "Type something and press Enter:\r\n";
+static const uint8_t msg_prefix[]  = "\r\nYou typed: ";
+static const uint8_t msg_suffix[]  = "\r\n> ";
+static const uint8_t msg_newline[] = "\r\n";
+static const uint8_t msg_prompt2[] = "> ";
 
 void gpio_setup(void){
     rcc_periph_clock_enable(RCC_GPIOA);
@@ -40,14 +48,15 @@ void uart_setup(){
 
     // startup messages
     for (volatile uint32_t i = 0; i < 1000000; i++);
-    usart_write_string(USART1, "Blue Pill Echo Terminal\r\n");
-    usart_write_string(USART1, "Type something and press Enter:\r\n");
+    usart_write(USART1, msg_welcome, sizeof(msg_welcome)-1);
+    usart_write(USART1, msg_prompt, sizeof(msg_prompt)-1);
+    usart_write(USART1, msg_prompt2, sizeof(msg_prompt2)-1);
 }
 
-void process_line(const char *line) {
-    usart_write_string(USART1, "\r\nYou typed: ");
-    usart_write_string(USART1, line);
-    usart_write_string(USART1, "\r\n> ");  // New prompt
+void process_line(const uint8_t *line, uint8_t length) {
+    usart_write(USART1, msg_prefix, sizeof(msg_prefix)-1);
+    usart_write(USART1, line, length);
+    usart_write(USART1, msg_suffix, sizeof(msg_suffix)-1);  // New prompt
 }
 
 int main(void) {
@@ -66,37 +75,30 @@ int main(void) {
     int8_t direction = 1;
     uint32_t last_update = systick_ticks;
 
-    usart_write_string(USART1, "> ");
-
     while(1){
 
         // === UART Echo ===
         if (usart_rx_available(USART1)) {
-            char c = (char)usart_read_DR(USART1);
-            
-            if (c == '\r' || c == '\n') {
-                // Enter pressed - line complete
-                rx_buffer[rx_index] = '\0';  // Null-terminate
-                
+            uint8_t c = (uint8_t)usart_read_DR(USART1);
+
+            if (c == '\r' || c == '\n'){    // Enter pressed
                 if (rx_index > 0) {
-                    process_line(rx_buffer);  // Echo the line back
+                    process_line(rx_buffer, rx_index);
                 } else {
-                    usart_write_string(USART1, "\r\n> ");  // Empty line, new prompt
+                    usart_write(USART1, msg_newline, sizeof(msg_newline)-1);
+                    usart_write(USART1, msg_prompt2, sizeof(msg_prompt2)-1);
                 }
-                
-                rx_index = 0;  // Reset for next line
-                
-            } else if (c == 8 || c == 127) {
-                // Backspace/Delete - remove last character
-                if (rx_index > 0) {
-                    rx_index--;
-                    usart_write_string(USART1, "\b \b");  // Erase on terminal
-                }
-                
-            } else if (rx_index < RX_BUFF_SIZE - 1) {
-                // Normal character - store and echo
+                rx_index = 0;
+
+            } else if (c == 8 || c == 127) {    // Backspace
+                rx_index--;
+                usart_write_DR(USART1, '\b');
+                usart_write_DR(USART1, ' ');
+                usart_write_DR(USART1, '\b');
+
+            } else if (rx_index < RX_BUFF_SIZE - 1) {   // normal character --> save to buffer
                 rx_buffer[rx_index++] = c;
-                usart_write_DR(USART1, c);  // Echo immediately
+                usart_write_DR(USART1, c);              // echo the character immediately
             }
         }
 
@@ -115,8 +117,6 @@ int main(void) {
             tim_pwm_set_duty(TIM2, TIM_CH2, 100 - duty);  // LED2: 100→0 (opposite!)
 
         }
-        
-        // Send a character
         
        __asm__("wfi");  // Sleep, save power!
     }

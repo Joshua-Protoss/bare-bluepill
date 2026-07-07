@@ -72,16 +72,3 @@ void nvic_can_sce_isr(void);
 
 ///c/gcc-arm-none-eabi/bin/arm-none-eabi-objdump -d firmware.elf | less
 //"cortex-debug.openocdPath": "c:/openocd/bin/openocd",
-
-// void systick_set_reload(uint32_t value);
-// bool systick_set_frequency(uint32_t current_ahb_freq, uint32_t systick_freq);
-// uint32_t systick_get_reload(void);
-// uint32_t systick_get_value(void);
-// void systick_set_clocksource(uint8_t clocksource);
-// void systick_interrupt_enable(void);
-// void systick_interrupt_disable(void);
-// void systick_counter_enable(void);
-// void systick_counter_disable(void);
-// uint8_t systick_get_countflag(void);
-// void systick_clear(void);
-// uint32_t systick_get_calib(void);

@@ -47,6 +47,9 @@ void usart_write_string(volatile usart_reg_t *usart, const char *str){
     }
 }
 
+void usart_rx_interrupt_enable(volatile usart_reg_t *usart);
+void usart_rx_interrupt_disable(volatile usart_reg_t *usart);
+
 const usart_config_t USART1_TX_RX_8BIT = {
     .mode = USART_CR1_TE | USART_CR1_RE,
     .databits = 0x00,

@@ -27,9 +27,13 @@ typedef struct {
 #define USART_CR1_RE             BIT(2)
 #define USART_CR1_PCE            BIT(10)     // Parity control enable
 #define USART_CR1_M              BIT(12)     // databits 0 : 8 data bits, 1 : 9 data bits
+#define USART_CR1_RXNEIE         BIT(5)      // RX Not Empty Interrupt Enable
+#define USART_CR1_TCIE           BIT(6)      // Transmission complete interrupt enable
+#define USART_CR1_TXEIE          BIT(7)      // TX empty interrupt enable
 
+// USART SR bits
 #define USART_SR_RXNE            BIT(5)      // RX not empty (data available)
-#define USART_SR_TC              BIT(6)
+#define USART_SR_TC              BIT(6)      // Transmission complete
 #define USART_SR_TXE             BIT(7)      // TX empty (ready for next byte)
 
 #define USART_DR_MASK            0x1FFU      // the first 8 bits
@@ -54,6 +58,8 @@ void usart_write(volatile usart_reg_t *usart, const uint8_t *data, const uint32_
 uint16_t usart_read_DR(volatile usart_reg_t *usart);
 bool usart_rx_available(volatile usart_reg_t *usart);
 void usart_write_string(volatile usart_reg_t *usart, const char *str);
+void usart_rx_interrupt_enable(volatile usart_reg_t *usart);
+void usart_rx_interrupt_disable(volatile usart_reg_t *usart);
 
 extern const usart_config_t USART1_TX_RX_8BIT;
 
