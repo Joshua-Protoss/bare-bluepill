@@ -17,11 +17,19 @@ typedef struct {
     volatile uint32_t GTPR;
 }usart_reg_t;
 
+// USART instances
 #define USART1                   ((volatile usart_reg_t *) USART1_BASE)
 #define USART2                   ((volatile usart_reg_t *) USART2_BASE)
 #define USART3                   ((volatile usart_reg_t *) USART3_BASE)
 
-// USART bit positions & masks
+#define USART_DR_MASK            0x1FFU      // the first 8 bits
+
+// USART SR bits
+#define USART_SR_RXNE            BIT(5)      // RX not empty (data available)
+#define USART_SR_TC              BIT(6)      // Transmission complete
+#define USART_SR_TXE             BIT(7)      // TX empty (ready for next byte)
+
+// USART CR1 bits
 #define USART_CR1_UE             BIT(13)
 #define USART_CR1_TE             BIT(3)
 #define USART_CR1_RE             BIT(2)
@@ -31,16 +39,13 @@ typedef struct {
 #define USART_CR1_TCIE           BIT(6)      // Transmission complete interrupt enable
 #define USART_CR1_TXEIE          BIT(7)      // TX empty interrupt enable
 
-// USART SR bits
-#define USART_SR_RXNE            BIT(5)      // RX not empty (data available)
-#define USART_SR_TC              BIT(6)      // Transmission complete
-#define USART_SR_TXE             BIT(7)      // TX empty (ready for next byte)
-
-#define USART_DR_MASK            0x1FFU      // the first 8 bits
-
 // CR1 word length definitions
 #define USART_DATABITS_8         0x00
 #define USART_DATABITS_9         BIT(12)
+
+// USART CR3 bits
+#define USART_CR3_DMAR           BIT(6)     // DMA enable receiver
+#define USART_CR3_DMAT           BIT(7)     // DMA enable transmitter
 
 // USART Configuration struct
 typedef struct {
@@ -60,6 +65,8 @@ bool usart_rx_available(volatile usart_reg_t *usart);
 void usart_write_string(volatile usart_reg_t *usart, const char *str);
 void usart_rx_interrupt_enable(volatile usart_reg_t *usart);
 void usart_rx_interrupt_disable(volatile usart_reg_t *usart);
+void usart_rx_dma_enable(volatile usart_reg_t *usart);
+void usart_rx_dma_disable(volatile usart_reg_t *usart);
 
 extern const usart_config_t USART1_TX_RX_8BIT;
 

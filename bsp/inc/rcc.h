@@ -22,6 +22,10 @@
 #define RCC_CFGR                                REG32(RCC_BASE + RCC_CFGR_OFFSET)
 #define RCC_CIR                                 REG32(RCC_BASE + RCC_CIR_OFFSET)
 #define FLASH_ACR                               REG32(0x40022000)   // flash access control register
+#define RCC_AHB_ENR                             REG32(RCC_BASE + RCC_AHB_ENR_OFFSET)
+#define RCC_APB1_ENR                            REG32(RCC_BASE + RCC_APB1_ENR_OFFSET)
+#define RCC_APB2_ENR                            REG32(RCC_BASE + RCC_APB2_ENR_OFFSET)
+#define FLASH_ACR                               REG32(0x40022000)
 
 // RCC_CR BITS
 #define RCC_CR_HSION             BIT(0)
@@ -60,13 +64,13 @@
 #define FLASH_ACR_PRFTBS         BIT(5) 
 
 // FLASH_ACR_LATENCY wait states
-#define FLASH_ACR_ZERO_WS       0x00   // if 0 < SYSCLK < 24MHz
+#define FLASH_ACR_ZERO_WS       0x00    // if 0 < SYSCLK < 24MHz
 #define FLASH_ACR_ONE_WS        0x01    // if 24MHz < SYSCLK < 48MHz
-#define FLASH_ACR_TWO_WS        0x02     // if 48 MHz < SYSCLK < 72MHZ
+#define FLASH_ACR_TWO_WS        0x02    // if 48 MHz < SYSCLK < 72MHZ
 
 // Bit positions for AHB peripherals
 #define RCC_DMA1_BIT             0
-#define RCC_DMA2_BIT             1
+#define RCC_DMA2_BIT             1      // there is no DMA2 in bluepill
 
 // Bit positions for APB2 peripherals
 #define RCC_GPIOA_BIT            2      // GPIOA
@@ -87,7 +91,7 @@
 enum rcc_periph_clken {
     // AHB peripherals
     RCC_DMA1 = RCC_ENCODE(RCC_AHB_ENR_OFFSET, RCC_DMA1_BIT),
-    RCC_DMA2 = RCC_ENCODE(RCC_AHB_ENR_OFFSET, RCC_DMA2_BIT),
+    RCC_DMA2 = RCC_ENCODE(RCC_AHB_ENR_OFFSET, RCC_DMA2_BIT),        // there is no DMA2 in bluepill
 
     // APB1 peripherals
     RCC_TIM2 = RCC_ENCODE(RCC_APB1_ENR_OFFSET, RCC_TIM2_BIT),

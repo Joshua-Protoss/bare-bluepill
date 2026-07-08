@@ -24,7 +24,7 @@ void usart_write_DR(volatile usart_reg_t *usart, uint16_t data) {
     usart->DR = data;
 }
 
-void usart_write(volatile usart_reg_t *usart, const uint8_t *data, const uint32_t length){
+void usart_write(volatile usart_reg_t *usart, const uint8_t *data, const uint32_t length){  // change const to volatile
     for (uint32_t i = 0; i < length; i++){
         usart_write_DR(usart, (uint16_t) data[i]);
     }
@@ -72,6 +72,14 @@ void usart_rx_interrupt_disable(volatile usart_reg_t *usart){
     } else if (usart == USART3) {
         nvic_disable_irq(NVIC_USART3_IRQ);
     }
+}
+
+void usart_rx_dma_enable(volatile usart_reg_t *usart){
+    usart->CR3 |= USART_CR3_DMAR;
+}
+
+void usart_rx_dma_disable(volatile usart_reg_t *usart){
+    usart->CR3 &= ~USART_CR3_DMAR;
 }
 
 const usart_config_t USART1_TX_RX_8BIT = {

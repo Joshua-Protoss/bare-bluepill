@@ -9,7 +9,15 @@ int main(void);
 void default_handler(void);
 void reset_handler(void);
 void nmi_handler(void);
+void hard_fault_handler(void);
 void systick_handler(void);
+void dma1_channel1_isr(void);
+void dma1_channel2_isr(void);
+void dma1_channel3_isr(void);
+void dma1_channel4_isr(void);
+void dma1_channel5_isr(void);
+void dma1_channel6_isr(void);
+void dma1_channel7_isr(void);
 void usart1_isr(void);
 void usart2_isr(void);
 void usart3_isr(void);
@@ -28,9 +36,16 @@ vector_table_t vector_table = {
     .pend_sv = default_handler,
     .systick = systick_handler,
     .irq_handler = {
-        [NVIC_USART1_IRQ] = usart1_isr, // USART1 = IRQ 37
-        [NVIC_USART2_IRQ] = usart2_isr, // USART2 = IRQ 38
-        [NVIC_USART3_IRQ] = usart3_isr, // USART3 = IRQ 39
+        [NVIC_DMA1_CHANNEL1_IRQ] = dma1_channel1_isr,           // DMA1 Channel1 = IRQ 11 ADC1
+        [NVIC_DMA1_CHANNEL2_IRQ] = dma1_channel2_isr,           // DMA1 Channel2 = IRQ 12 SPI1_RX   
+        [NVIC_DMA1_CHANNEL3_IRQ] = dma1_channel3_isr,           // DMA1 Channel3 = IRQ 13 SPI1_TX  
+        [NVIC_DMA1_CHANNEL4_IRQ] = dma1_channel4_isr,           // DMA1 Channel4 = IRQ 14 USART1_TX 
+        [NVIC_DMA1_CHANNEL5_IRQ] = dma1_channel5_isr,           // DMA1 Channel5 = IRQ 15 USART1_RX
+        [NVIC_DMA1_CHANNEL6_IRQ] = dma1_channel6_isr,           // DMA1 Channel6 = IRQ 16 USART2_RX 
+        [NVIC_DMA1_CHANNEL7_IRQ] = dma1_channel7_isr,           // DMA1 Channel7 = IRQ 17 USART2_TX
+        [NVIC_USART1_IRQ] = usart1_isr,                         // USART1 = IRQ 37
+        [NVIC_USART2_IRQ] = usart2_isr,                         // USART2 = IRQ 38
+        [NVIC_USART3_IRQ] = usart3_isr,                         // USART3 = IRQ 39
     }
 };
 
@@ -58,6 +73,13 @@ void default_handler(void){
     while(1);
 }
 
+void dma1_channel1_isr(void) __attribute__((weak, used, alias("default_handler")));
+void dma1_channel2_isr(void) __attribute__((weak, used, alias("default_handler")));
+void dma1_channel3_isr(void) __attribute__((weak, used, alias("default_handler")));
+void dma1_channel4_isr(void) __attribute__((weak, used, alias("default_handler")));
+void dma1_channel5_isr(void) __attribute__((weak, used, alias("default_handler")));
+void dma1_channel6_isr(void) __attribute__((weak, used, alias("default_handler")));
+void dma1_channel7_isr(void) __attribute__((weak, used, alias("default_handler")));
 void usart1_isr(void) __attribute__((weak, used, alias("default_handler")));
 void usart2_isr(void) __attribute__((weak, used, alias("default_handler")));
 void usart3_isr(void) __attribute__((weak, used, alias("default_handler")));

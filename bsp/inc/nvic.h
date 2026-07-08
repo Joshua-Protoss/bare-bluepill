@@ -63,6 +63,12 @@
 #define NVIC_RTC_ALARM_IRQ      41
 #define NVIC_USB_WAKEUP_IRQ     42
 
+// Doesn't exist in bluepill
+#define NVIC_DMA2_CHANNEL1_IRQ          56
+#define NVIC_DMA2_CHANNEL2_IRQ          57
+#define NVIC_DMA2_CHANNEL3_IRQ          58
+#define NVIC_DMA2_CHANNEL4_5_IRQ        59
+
 void nvic_wwdg_isr(void);
 void nvic_pvd_isr(void);
 void nvic_tamper_isr(void);

@@ -29,6 +29,7 @@ OBJS += $(BSP_SRC_DIR)/gpio.o
 OBJS += $(BSP_SRC_DIR)/systick.o
 OBJS += $(BSP_SRC_DIR)/timers.o
 OBJS += $(BSP_SRC_DIR)/usart.o
+OBJS += $(BSP_SRC_DIR)/dma.o
 
 ###################################################################
 # C Flags
