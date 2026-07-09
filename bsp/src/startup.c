@@ -10,6 +10,7 @@ void default_handler(void);
 void reset_handler(void);
 void nmi_handler(void);
 void hard_fault_handler(void);
+void bus_fault_handler(void);
 void systick_handler(void);
 void dma1_channel1_isr(void);
 void dma1_channel2_isr(void);
@@ -27,9 +28,9 @@ vector_table_t vector_table = {
     .initial_sp_value = &_stack,
     .reset = reset_handler,
     .nmi = nmi_handler,
-    .hard_fault = default_handler,
+    .hard_fault = hard_fault_handler,
     .memory_management = default_handler,
-    .bus_fault = default_handler,
+    .bus_fault = bus_fault_handler,
     .usage_fault = default_handler,
     .sv_call = default_handler,
     .debug_monitor = default_handler,
@@ -61,7 +62,6 @@ void __attribute__((weak,used)) reset_handler(void){
     while (dest < &_ebss){
         *dest++ = 0;
     }
-
     
     // Activate 8-byte alignment feature, needed for bluepill
     SCB_CCR |= STKALIGN;
@@ -73,11 +73,24 @@ void default_handler(void){
     while(1);
 }
 
+void hard_fault_handler(void){
+    // Read fault status registers for debugging
+    volatile uint32_t cfsr = *(volatile uint32_t*)0xE000ED28;
+    volatile uint32_t hfsr = *(volatile uint32_t*)0xE000ED2C;
+    volatile uint32_t bfar = *(volatile uint32_t*)0xE000ED38;
+    volatile uint32_t afsr = *(volatile uint32_t*)0xE000ED3C;
+
+    while(1){
+
+    }
+}
+
+void bus_fault_handler(void) __attribute__((weak, used, alias("default_handler")));
 void dma1_channel1_isr(void) __attribute__((weak, used, alias("default_handler")));
 void dma1_channel2_isr(void) __attribute__((weak, used, alias("default_handler")));
 void dma1_channel3_isr(void) __attribute__((weak, used, alias("default_handler")));
 void dma1_channel4_isr(void) __attribute__((weak, used, alias("default_handler")));
-void dma1_channel5_isr(void) __attribute__((weak, used, alias("default_handler")));
+//void dma1_channel5_isr(void) __attribute__((weak, used, alias("default_handler")));
 void dma1_channel6_isr(void) __attribute__((weak, used, alias("default_handler")));
 void dma1_channel7_isr(void) __attribute__((weak, used, alias("default_handler")));
 void usart1_isr(void) __attribute__((weak, used, alias("default_handler")));

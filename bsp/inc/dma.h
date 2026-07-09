@@ -76,4 +76,3 @@ void dma_enable(volatile DMA_Channel_reg_t *dma_channel);
 void dma_disable(volatile DMA_Channel_reg_t *dma_channel);
 
 #endif // INC_DMA_H
-

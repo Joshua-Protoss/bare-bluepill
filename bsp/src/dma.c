@@ -3,7 +3,6 @@
 
 void dma_init(volatile DMA_Channel_reg_t *dma_channel, uint32_t peripheral_addr, uint32_t memory_addr, uint16_t transfer_size){
     // 1. Safely disable the channel before modifying control registers
-    //dma_channel->CCR = 0;
     dma_channel->CCR &= ~DMA_CCR_EN;    // clear EN bit
 
     // 2. Set the target memory and peripheral addresses

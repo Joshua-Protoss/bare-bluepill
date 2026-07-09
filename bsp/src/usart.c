@@ -63,7 +63,6 @@ void usart_rx_interrupt_enable(volatile usart_reg_t *usart){
 
 void usart_rx_interrupt_disable(volatile usart_reg_t *usart){
     usart->CR1 &= ~USART_CR1_RXNEIE;
-
     // disable nvic
     if (usart == USART1) {
         nvic_disable_irq(NVIC_USART1_IRQ);

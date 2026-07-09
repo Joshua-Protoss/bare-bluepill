@@ -71,3 +71,34 @@ void usart_rx_dma_disable(volatile usart_reg_t *usart);
 extern const usart_config_t USART1_TX_RX_8BIT;
 
 #endif // INC_USART_H
+
+
+
+
+// void usart1_isr(void) {
+//     // === UART Echo ===
+//     if (USART1->SR & USART_SR_RXNE) {
+//         uint8_t c = (uint8_t)(USART1->DR & 0xFF);
+
+//         if (c == '\r' || c == '\n'){    // Enter pressed
+//             if (rx_index > 0) {
+//                 process_line(rx_buffer, rx_index);
+//             } else {
+//                 usart_write(USART1, msg_newline, sizeof(msg_newline)-1);
+//                 usart_write(USART1, msg_prompt2, sizeof(msg_prompt2)-1);
+//             }
+//             rx_index = 0;
+//         } else if (c == 8 || c == 127) {    // Backspace
+//             if (rx_index > 0) {
+//                 rx_index--;
+//                 usart_write_DR(USART1, '\b');
+//                 usart_write_DR(USART1, ' ');
+//                 usart_write_DR(USART1, '\b');
+//             }
+
+//         } else if (rx_index < RX_BUFF_SIZE - 1) {   // normal character --> save to buffer
+//             rx_buffer[rx_index++] = c;
+//             usart_write_DR(USART1, c);              // echo the character immediately
+//         }
+//     }
+// }
