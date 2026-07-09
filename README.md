@@ -64,7 +64,6 @@
 - ✅ 8/16/32-bit transfer sizes
 - ✅ All 7 DMA1 channels mapped to peripherals
 
-
 Demo video here: https://youtu.be/WjqHCQbmScI
 
 ## Quick Example
@@ -106,3 +105,16 @@ int main(void) {
     }
     return 0;
 }
+
+What's Next?
+ADC driver
+
+I2C driver
+
+SPI driver
+
+Input capture / encoder mode for timers
+
+printf() support via UART
+
+Bootloader with firmware signing
