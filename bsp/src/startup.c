@@ -73,24 +73,28 @@ void default_handler(void){
     while(1);
 }
 
-void hard_fault_handler(void){
-    // Read fault status registers for debugging
+void bus_fault_handler(void) {
+    // These variables are read in debugger, not used in code
+    // The volatile prevents compiler from optimizing them away
     volatile uint32_t cfsr = *(volatile uint32_t*)0xE000ED28;
-    volatile uint32_t hfsr = *(volatile uint32_t*)0xE000ED2C;
     volatile uint32_t bfar = *(volatile uint32_t*)0xE000ED38;
-    volatile uint32_t afsr = *(volatile uint32_t*)0xE000ED3C;
-
-    while(1){
-
+    
+    // Suppress "unused variable" warnings:
+    (void)cfsr;
+    (void)bfar;
+    
+    while(1) {
+        // Breakpoint here for debugging
     }
 }
 
-void bus_fault_handler(void) __attribute__((weak, used, alias("default_handler")));
+void hard_fault_handler(void) __attribute__((weak, used, alias("default_handler")));
+//void bus_fault_handler(void) __attribute__((weak, used, alias("default_handler")));
 void dma1_channel1_isr(void) __attribute__((weak, used, alias("default_handler")));
 void dma1_channel2_isr(void) __attribute__((weak, used, alias("default_handler")));
 void dma1_channel3_isr(void) __attribute__((weak, used, alias("default_handler")));
 void dma1_channel4_isr(void) __attribute__((weak, used, alias("default_handler")));
-//void dma1_channel5_isr(void) __attribute__((weak, used, alias("default_handler")));
+void dma1_channel5_isr(void) __attribute__((weak, used, alias("default_handler")));
 void dma1_channel6_isr(void) __attribute__((weak, used, alias("default_handler")));
 void dma1_channel7_isr(void) __attribute__((weak, used, alias("default_handler")));
 void usart1_isr(void) __attribute__((weak, used, alias("default_handler")));

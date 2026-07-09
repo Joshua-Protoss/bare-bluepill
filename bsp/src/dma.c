@@ -17,7 +17,7 @@ void dma_init(volatile DMA_Channel_reg_t *dma_channel, uint32_t peripheral_addr,
                      | DMA_CCR_PSIZE_8BIT      // 8-bit peripheral
                      | DMA_CCR_MSIZE_8BIT      // 8-bit memory
                      | DMA_CCR_CIRC            // Circular mode (keep receiving)
-                     //| DMA_CCR_HTIE            // Interrupt on half transfer complete
+                     | DMA_CCR_HTIE            // Interrupt on half transfer complete
                      | DMA_CCR_TCIE;           // Interrupt on transfer complete
                                                // DIR=0: Read from peripheral → write to memory (default)
 }
@@ -52,7 +52,7 @@ void dma_disable(volatile DMA_Channel_reg_t *dma_channel){
     if (dma_channel == DMA1_Channel6) nvic_disable_irq(NVIC_DMA1_CHANNEL6_IRQ);
     if (dma_channel == DMA1_Channel7) nvic_disable_irq(NVIC_DMA1_CHANNEL7_IRQ);
 
-        // DMA2 channels (only compiled if DMA2 exists, doesn't exist in bluepill)
+    // DMA2 channels (only compiled if DMA2 exists, doesn't exist in bluepill)
     #ifdef DMA2_BASE
     if (dma_channel == DMA2_Channel1) nvic_disable_irq(NVIC_DMA2_CHANNEL1_IRQ);
     if (dma_channel == DMA2_Channel2) nvic_disable_irq(NVIC_DMA2_CHANNEL2_IRQ);

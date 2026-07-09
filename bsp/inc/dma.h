@@ -49,6 +49,17 @@ typedef struct {
 #define DMA_CH6_USART2_RX                           5
 #define DMA_CH7_USART2_TX                           6
 
+// Channel-specific flag clearing macros
+#define DMA_IFCR_CGIF(ch)   BIT((ch-1)*4 + 0)
+#define DMA_IFCR_CTCIF(ch)  BIT((ch-1)*4 + 1)
+#define DMA_IFCR_CHTIF(ch)  BIT((ch-1)*4 + 2)
+#define DMA_IFCR_CTEIF(ch)  BIT((ch-1)*4 + 3)
+// Channel-specific ISR flag checking macros
+#define DMA_ISR_GIF(ch)   BIT((ch-1)*4 + 0)
+#define DMA_ISR_TCIF(ch)  BIT((ch-1)*4 + 1)
+#define DMA_ISR_HTIF(ch)  BIT((ch-1)*4 + 2)
+#define DMA_ISR_TEIF(ch)  BIT((ch-1)*4 + 3)
+
 // CCR Bits
 #define DMA_CCR_EN                                  BIT(0)        // Channel enable
 #define DMA_CCR_TCIE                                BIT(1)        // Transfer complete interrupt

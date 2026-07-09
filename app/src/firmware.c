@@ -5,8 +5,6 @@
 #include "timers.h"
 #include "usart.h"
 #include "dma.h"
-#include "startup.h"
-#include "nvic.h"
 
 #define LED_PORT                        (PORT_GPIOA)       // this is an external LED connected to PA0
 #define LED_PIN                         (PIN_GPIO0)
@@ -19,14 +17,14 @@ volatile uint32_t systick_ticks = 0;
 static volatile uint8_t rx_buffer[RX_BUFF_SIZE];
 static volatile uint8_t rx_index = 0;
 static volatile uint32_t dma_full_complete = 0;
-//volatile uint32_t dma_isr_count = 0;
+static volatile uint32_t dma_half_complete = 0;
 
 // Pre-defined messages as uint8_t arrays
 static const uint8_t msg_welcome[] = "Blue Pill Echo Terminal\r\n";
 static const uint8_t msg_prompt[]  = "Type something and press Enter:\r\n";
 //static const uint8_t msg_prefix[]  = "\r\nYou typed: ";
 //static const uint8_t msg_suffix[]  = "\r\n> ";
-//static const uint8_t msg_newline[] = "\r\n";
+static const uint8_t msg_newline[] = "\r\n";
 static uint8_t msg_prompt2[] = "> ";
 
 // static void process_line(const volatile uint8_t *line, uint8_t length) {
@@ -46,10 +44,18 @@ void systick_handler(void){
     systick_ticks++;
 }
 
-void __attribute__((used)) dma1_channel5_isr(void) {
+void dma1_channel5_isr(void) {
     // Clear the interrupt flag!
-    DMA1_Controller->IFCR = BIT(17); // look at reference manual rm008,  CGIF5(16) CTCIF5(17) CHTIF5(18) CTEIF5(19) for channel 5
-    dma_full_complete = 1;
+    if (DMA1_Controller->ISR & DMA_ISR_HTIF(5)) {
+        DMA1_Controller->IFCR = DMA_IFCR_CHTIF(5); // clear HTIF5
+        dma_half_complete = 1;
+    }
+
+    if (DMA1_Controller->ISR & DMA_ISR_TCIF(5)) {
+        DMA1_Controller->IFCR = DMA_IFCR_CTCIF(5); // look at reference manual rm008,  CGIF5(16) CTCIF5(17) CHTIF5(18) CTEIF5(19) for channel 5
+        dma_full_complete = 1;
+    }
+    
 }
 
 void uart_setup(){
@@ -103,10 +109,20 @@ int main(void) {
 
     while(1){
 
+        // ==== DMA : Handle half complete 32 bytes ===
+        if (dma_half_complete) {
+            dma_half_complete = 0;
+            // Echo first half of buffer
+            usart_write(USART1, (const uint8_t *) rx_buffer, RX_BUFF_SIZE/2);
+            usart_write(USART1, msg_newline, sizeof(msg_newline) - 1);
+            usart_write(USART1, msg_prompt2, sizeof(msg_prompt2)-1);
+        }
+
         // ==== DMA : Handle full complete 64 bytes ===
         if (dma_full_complete) {
             dma_full_complete = 0;
-            usart_write(USART1, (const uint8_t *) rx_buffer, RX_BUFF_SIZE);
+            usart_write(USART1, (const uint8_t *) (rx_buffer + RX_BUFF_SIZE/2), RX_BUFF_SIZE/2);
+            usart_write(USART1, msg_newline, sizeof(msg_newline) - 1);
             usart_write(USART1, msg_prompt2, sizeof(msg_prompt2) - 1);
         }
 
