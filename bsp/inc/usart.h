@@ -25,12 +25,15 @@ typedef struct {
 #define USART_DR_MASK            0x1FFU      // the first 8 bits
 
 // USART SR bits
+#define USART_SR_IDLE            BIT(4)      // Idle Line is detected
 #define USART_SR_RXNE            BIT(5)      // RX not empty (data available)
 #define USART_SR_TC              BIT(6)      // Transmission complete
 #define USART_SR_TXE             BIT(7)      // TX empty (ready for next byte)
 
+
 // USART CR1 bits
 #define USART_CR1_UE             BIT(13)
+#define USART_CR1_IDLEIE         BIT(4)      // A USART interrupt is generated whenever IDLE=1 in the USART_SR register
 #define USART_CR1_TE             BIT(3)
 #define USART_CR1_RE             BIT(2)
 #define USART_CR1_PCE            BIT(10)     // Parity control enable
@@ -49,7 +52,7 @@ typedef struct {
 
 // USART Configuration struct
 typedef struct {
-    uint32_t mode;          // USART_CR1_TE | USART_CR!_RE
+    uint32_t mode;          // USART_CR1_TE | USART_CR1_RE
     uint32_t databits;      // 0 for 8-bit, USART_CR1_M for 9-bit
     uint32_t parity;        // 0 for none, USART_CR1_PCE for enabled, etc
     uint32_t stopbits;      // 0 for 1 stop bit, USART_CR2_STOP1 for 2 bits
@@ -67,6 +70,9 @@ void usart_rx_interrupt_enable(volatile usart_reg_t *usart);
 void usart_rx_interrupt_disable(volatile usart_reg_t *usart);
 void usart_rx_dma_enable(volatile usart_reg_t *usart);
 void usart_rx_dma_disable(volatile usart_reg_t *usart);
+void usart_idle_interrupt_enable(volatile usart_reg_t *usart);
+void usart_idle_interrupt_disable(volatile usart_reg_t *usart);
+void usart_printf(volatile usart_reg_t *usart, const char *fmt, ...);
 
 extern const usart_config_t USART1_TX_RX_8BIT;
 
@@ -101,4 +107,10 @@ extern const usart_config_t USART1_TX_RX_8BIT;
 //             usart_write_DR(USART1, c);              // echo the character immediately
 //         }
 //     }
+// }
+
+// static void process_line(const volatile uint8_t *line, uint8_t length) {
+//     usart_write(USART1, msg_prefix, sizeof(msg_prefix)-1);
+//     usart_write(USART1, (const uint8_t*)line, length);
+//     usart_write(USART1, msg_suffix, sizeof(msg_suffix)-1);  // New prompt
 // }

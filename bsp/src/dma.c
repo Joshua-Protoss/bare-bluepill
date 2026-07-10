@@ -17,7 +17,7 @@ void dma_init(volatile DMA_Channel_reg_t *dma_channel, uint32_t peripheral_addr,
                      | DMA_CCR_PSIZE_8BIT      // 8-bit peripheral
                      | DMA_CCR_MSIZE_8BIT      // 8-bit memory
                      | DMA_CCR_CIRC            // Circular mode (keep receiving)
-                     | DMA_CCR_HTIE            // Interrupt on half transfer complete
+                     //| DMA_CCR_HTIE            // Interrupt on half transfer complete
                      | DMA_CCR_TCIE;           // Interrupt on transfer complete
                                                // DIR=0: Read from peripheral → write to memory (default)
 }

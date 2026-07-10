@@ -30,6 +30,7 @@ OBJS += $(BSP_SRC_DIR)/systick.o
 OBJS += $(BSP_SRC_DIR)/timers.o
 OBJS += $(BSP_SRC_DIR)/usart.o
 OBJS += $(BSP_SRC_DIR)/dma.o
+OBJS += $(BSP_SRC_DIR)/syscalls.o
 
 ###################################################################
 # C Flags

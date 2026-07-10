@@ -1,6 +1,10 @@
+#include <stdarg.h>
+#include <stdio.h>
 #include "usart.h"
 #include "rcc.h"
 #include "nvic.h"
+
+static char printf_buffer[64];
 
 void usart_init(volatile usart_reg_t *usart, uint32_t baud_rate, const usart_config_t *config){
 
@@ -79,6 +83,43 @@ void usart_rx_dma_enable(volatile usart_reg_t *usart){
 
 void usart_rx_dma_disable(volatile usart_reg_t *usart){
     usart->CR3 &= ~USART_CR3_DMAR;
+}
+
+void usart_idle_interrupt_enable(volatile usart_reg_t *usart){
+    usart->CR1 |= USART_CR1_IDLEIE;
+
+    // enable nvic
+    if (usart == USART1) {
+        nvic_enable_irq(NVIC_USART1_IRQ);
+    } else if (usart == USART2) {
+        nvic_enable_irq(NVIC_USART2_IRQ);
+    } else if (usart == USART3) {
+        nvic_enable_irq(NVIC_USART3_IRQ);
+    }
+}
+
+void usart_idle_interrupt_disable(volatile usart_reg_t *usart){
+    usart->CR1 &= ~USART_CR1_IDLEIE;
+
+    // disable nvic
+    if (usart == USART1) {
+        nvic_disable_irq(NVIC_USART1_IRQ);
+    } else if (usart == USART2) {
+        nvic_disable_irq(NVIC_USART2_IRQ);
+    } else if (usart == USART3) {
+        nvic_disable_irq(NVIC_USART3_IRQ);
+    }
+}
+
+void usart_printf(volatile usart_reg_t *usart, const char *fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    int len = vsnprintf(printf_buffer, sizeof(printf_buffer), fmt, args);
+    va_end(args);
+
+    if (len > 0) {
+        usart_write(usart, (const uint8_t*) printf_buffer, (uint32_t) len);
+    }
 }
 
 const usart_config_t USART1_TX_RX_8BIT = {
