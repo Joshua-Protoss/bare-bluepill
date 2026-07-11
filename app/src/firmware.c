@@ -170,7 +170,7 @@ int main(void) {
                     message_length--; // Don't include Enter in display
                 }
             }
-            
+
             // Process backspaces in the message
             uint16_t clean_length = 0;
             for (uint16_t i = 0; i < message_length; i++) {
@@ -182,9 +182,6 @@ int main(void) {
                     rx_buffer[clean_length++] = rx_buffer[i];
                 }
             }
-
-            // Echo with prefix without new lines
-            usart_write_DR(USART1, (uint16_t)rx_buffer[message_length-1]);
 
             if (ends_with_enter){
                 usart_write(USART1, msg_new_prompt, sizeof(msg_new_prompt)-1);
@@ -199,7 +196,11 @@ int main(void) {
                 DMA1_Channel5->CNDTR = RX_BUFF_SIZE;
                 DMA1_Channel5->CMAR = (uint32_t) rx_buffer;
                 DMA1_Channel5->CCR |= DMA_CCR_EN;
+            } else {
+                // Echo with prefix without new lines
+                usart_write_DR(USART1, (uint16_t)rx_buffer[message_length-1]);
             }
+
         }
 
         // ==== DMA : Handle full complete 128 bytes ===
