@@ -2,9 +2,10 @@
 #include "rcc.h"
 #include "gpio.h"
 #include "systick.h"
-#include "timers.h"
+#include <string.h>
 #include "usart.h"
 #include "dma.h"
+
 
 #define LED_PORT                        (PORT_GPIOA)       // this is an external LED connected to PA0
 #define LED_PIN                         (PIN_GPIO0)
@@ -20,17 +21,24 @@ static volatile uint16_t message_length = 0;
 static volatile bool dma_full_complete = false;
 
 // Pre-defined messages as uint8_t arrays
-static const uint8_t msg_welcome[] = "Blue Pill Echo Terminal\r\n";
-static const uint8_t msg_prompt[]  = "Type something and press Enter:\r\n";
+static const uint8_t msg_welcome[] = "Blue Pill LED Command Terminal\r\n";
+static const uint8_t msg_prompt[]  = "Type 'HELP' for commands:\r\n";
 //static const uint8_t msg_prefix[]  = "\r\nYou typed: ";
 static const uint8_t msg_prompt2[] = ">";
 static const uint8_t msg_new_prompt[] = "\r\n>";
 
+// LED states
+static bool led1_state = false;
+static bool led2_state = false;
+
 void gpio_setup(void){
     rcc_periph_clock_enable(RCC_GPIOA);
-    rcc_periph_clock_enable(RCC_TIM2);
-    gpio_set_mode(LED_PORT, LED_PIN, GPIO_MODE_OUTPUT_50MHZ, GPIO_CNF_OUTPUT_AF_PUSHPULL);
-    gpio_set_mode(LED2_PORT, LED2_PIN, GPIO_MODE_OUTPUT_50MHZ, GPIO_CNF_OUTPUT_AF_PUSHPULL);
+    gpio_set_mode(LED_PORT, LED_PIN, GPIO_MODE_OUTPUT_50MHZ, GPIO_CNF_OUTPUT_PUSHPULL);
+    gpio_set_mode(LED2_PORT, LED2_PIN, GPIO_MODE_OUTPUT_50MHZ, GPIO_CNF_OUTPUT_PUSHPULL);
+
+    // Start with LEDs OFF
+    gpio_write_pin(LED_PORT, LED_PIN, true);   // Active low? Adjust as needed
+    gpio_write_pin(LED2_PORT, LED2_PIN, true);
 }
 
 void systick_handler(void){
@@ -71,18 +79,18 @@ void uart_setup(){
 
     // Configure USART1
     usart_init(USART1, 115200, &USART1_TX_RX_8BIT);    // the function will automatically compute the correct BRR for 44MHz
-    // Clear IDLE flag: read SR, then read DR
-    // Clearing an Overrun Error (ORE), Flushing the Buffer/Data Discard 
+    
+    // Clear pending IDLE flag before enabling interrupt
     volatile uint32_t dummy = USART1->SR;
     dummy = USART1->DR;
     (void) dummy;
+
     // Enable IDLE LINE interrupt
     usart_idle_interrupt_enable(USART1);
 
     // startup messages
     usart_write(USART1, msg_welcome, sizeof(msg_welcome)-1);
     usart_write(USART1, msg_prompt, sizeof(msg_prompt)-1);
-    usart_printf(USART1, "SysClk: %lu Hz\r\n", rcc_get_sysclk_freq());
     usart_write(USART1, msg_prompt2, sizeof(msg_prompt2) - 1);
 }
 
@@ -97,6 +105,48 @@ void dma_setup(){
     usart_rx_dma_enable(USART1);
 }
 
+void process_command(const char *cmd){
+
+    if (strcmp(cmd, "HELP") == 0) {
+        usart_printf(USART1, "Commands:\r\n");
+        usart_printf(USART1, "  LED1 ON   - Turn LED1 ON\r\n");
+        usart_printf(USART1, "  LED1 OFF  - Turn LED1 OFF\r\n");
+        usart_printf(USART1, "  LED2 ON   - Turn LED2 ON\r\n");
+        usart_printf(USART1, "  LED2 OFF  - Turn LED2 OFF\r\n");
+        usart_printf(USART1, "  STATUS    - Show LED states\r\n");
+        usart_printf(USART1, "  CLOCK     - Show system clocks\r\n");
+        usart_printf(USART1, "  HELP      - This message\r\n");
+    } else if (strcmp(cmd, "LED1 ON") == 0) {
+        gpio_write_pin(LED_PORT, LED_PIN, false);
+        led1_state = true;
+        usart_printf(USART1, "LED1: ON\r\n");
+    } else if (strcmp(cmd, "LED1 OFF") == 0) {
+        gpio_write_pin(LED_PORT, LED_PIN, true);
+        led1_state = false;
+        usart_printf(USART1, "LED1: OFF\r\n");
+    } else if (strcmp(cmd, "LED2 ON") == 0) {
+        gpio_write_pin(LED2_PORT, LED2_PIN, false);
+        led2_state = true;
+        usart_printf(USART1, "LED2: ON\r\n");
+    } else if (strcmp(cmd, "LED2 OFF") == 0) {
+        gpio_write_pin(LED2_PORT, LED2_PIN, true);
+        led2_state = false;
+        usart_printf(USART1, "LED2: OFF\r\n");
+    } else if (strcmp(cmd, "STATUS") == 0) {
+        usart_printf(USART1, "LED1: %s\r\n", led1_state ? "ON" : "OFF");
+        usart_printf(USART1, "LED2: %s\r\n", led2_state ? "ON" : "OFF");
+        usart_printf(USART1, "Uptime: %lu sec\r\n", systick_ticks / 1000);
+    } else if (strcmp(cmd, "CLOCK") == 0) {
+        usart_printf(USART1, "SysClk: %lu Hz\r\n", rcc_get_sysclk_freq());
+        usart_printf(USART1, "AHB:    %lu Hz\r\n", rcc_get_ahb_freq());
+        usart_printf(USART1, "APB1:   %lu Hz\r\n", rcc_get_apb1_freq());
+        usart_printf(USART1, "APB2:   %lu Hz\r\n", rcc_get_apb2_freq());
+    } else {
+        usart_printf(USART1, "Unknown: '%s'\r\n", cmd);
+        usart_printf(USART1, "Type 'HELP' for commands\r\n");
+    }
+}
+
 int main(void) {
     rcc_clock_configure(&RCC_CLOCK_HSE_44MHZ);
     gpio_setup();
@@ -104,24 +154,17 @@ int main(void) {
     uart_setup();
     dma_setup();
 
-    // TIM2 clock = APB1 frequency × 2
-    uint32_t tim_clock = rcc_get_apb1_freq() * 2;
-    tim_pwm_init(TIM2, &PWM_CH1_1KHZ_50, tim_clock);            // channel 1
-    tim_pwm_init(TIM2, &PWM_CH2_1KHZ_50, tim_clock);            // channel 2 PWM
-
-    // Sweep duty cycle up and down
-    uint8_t duty = 0, direction = 1;
-    uint32_t last_update = systick_ticks;
-
+    gpio_write_pin(LED_PORT, LED_PIN, true);
+    
     while(1){
         // === Handle received message ===
         if (message_ready) {
             message_ready = false;
 
-            // Check if the last character is Enter (\r or \n)
+            // Check if last character is Enter
             bool ends_with_enter = false;
             if (message_length > 0) {
-                uint8_t last_char = rx_buffer[message_length - 1]; 
+                uint8_t last_char = rx_buffer[message_length-1];
                 if (last_char == '\r' || last_char == '\n') {
                     ends_with_enter = true;
                     message_length--; // Don't include Enter in display
@@ -133,9 +176,7 @@ int main(void) {
             for (uint16_t i = 0; i < message_length; i++) {
                 if (rx_buffer[i] == 8 || rx_buffer[i] == 127) {
                     // Backspace: remove previous character
-                    if (clean_length > 0) {
-                        clean_length--;
-                    }
+                    if (clean_length > 0) clean_length--;
                 } else {
                     // Normal character: add to clean buffer
                     rx_buffer[clean_length++] = rx_buffer[i];
@@ -143,18 +184,22 @@ int main(void) {
             }
 
             // Echo with prefix without new lines
-            usart_write(USART1, (const uint8_t*) rx_buffer, message_length);
+            usart_write_DR(USART1, (uint16_t)rx_buffer[message_length-1]);
 
-            if (ends_with_enter) {
-                usart_write(USART1, msg_new_prompt, sizeof(msg_new_prompt) - 1);
-            } 
+            if (ends_with_enter){
+                usart_write(USART1, msg_new_prompt, sizeof(msg_new_prompt)-1);
+                if (clean_length > 0) {
+                    rx_buffer[clean_length] = '\0';
+                    process_command((const char *)rx_buffer);
+                    usart_write(USART1, msg_prompt2, sizeof(msg_prompt2) - 1);
+                }
 
-            // reset DMA for next message
-            DMA1_Channel5->CCR &= ~DMA_CCR_EN;
-            DMA1_Channel5->CNDTR = RX_BUFF_SIZE;
-            DMA1_Channel5->CMAR = (uint32_t) rx_buffer;
-            DMA1_Channel5->CCR |= DMA_CCR_EN;
-            
+                // reset DMA for next message
+                DMA1_Channel5->CCR &= ~DMA_CCR_EN;
+                DMA1_Channel5->CNDTR = RX_BUFF_SIZE;
+                DMA1_Channel5->CMAR = (uint32_t) rx_buffer;
+                DMA1_Channel5->CCR |= DMA_CCR_EN;
+            }
         }
 
         // ==== DMA : Handle full complete 128 bytes ===
@@ -163,16 +208,12 @@ int main(void) {
             dma_full_complete = 0;
             usart_write(USART1, (const uint8_t *) rx_buffer, RX_BUFF_SIZE);
             usart_write(USART1, msg_new_prompt, sizeof(msg_new_prompt) - 1);
-        }
 
-        // PWM : Update duty cycle every 10ms
-        if (systick_ticks - last_update >= 10) {
-            last_update = systick_ticks;
-            duty += direction;
-            if (duty >= 100) direction = -1;
-            if (duty <= 0) direction = 1;
-            tim_pwm_set_duty(TIM2, TIM_CH1, duty);
-            tim_pwm_set_duty(TIM2, TIM_CH2, 100 - duty);        // LED2: 100→0 (opposite!)
+            // reset DMA for next message
+            DMA1_Channel5->CCR &= ~DMA_CCR_EN;
+            DMA1_Channel5->CNDTR = RX_BUFF_SIZE;
+            DMA1_Channel5->CMAR = (uint32_t) rx_buffer;
+            DMA1_Channel5->CCR |= DMA_CCR_EN;
         }
         
        __asm__("wfi");  // Sleep, save power!
