@@ -80,6 +80,8 @@
 #define RCC_GPIOE_BIT            6      // GPIOE
 #define RCC_GPIOF_BIT            7      // GPIOF
 #define RCC_GPIOG_BIT            8      // GPIOG
+#define RCC_ADC1_BIT             9      // ADC1
+#define RCC_ADC2_BIT             10     // ADC2
 
 // Bit positions for APB1 peripherals
 #define RCC_TIM2_BIT             0
@@ -107,6 +109,8 @@ enum rcc_periph_clken {
     RCC_GPIOE = RCC_ENCODE(RCC_APB2_ENR_OFFSET, RCC_GPIOE_BIT),
     RCC_GPIOF = RCC_ENCODE(RCC_APB2_ENR_OFFSET, RCC_GPIOF_BIT),
     RCC_GPIOG = RCC_ENCODE(RCC_APB2_ENR_OFFSET, RCC_GPIOG_BIT),
+    RCC_ADC1 = RCC_ENCODE(RCC_APB2_ENR_OFFSET, RCC_ADC1_BIT),
+    RCC_ADC2 = RCC_ENCODE(RCC_APB2_ENR_OFFSET, RCC_ADC2_BIT),
 };
 
 // System clock sources

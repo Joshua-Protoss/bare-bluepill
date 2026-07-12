@@ -77,7 +77,7 @@ printf() support via UART
 
 Bootloader with firmware signing
 
-Demo video here: https://youtu.be/WjqHCQbmScI
+Demo video here: https://youtube.com/shorts/jtTf9jUTPdQ?si=VzuL8Kx_b_jeivDf
 
 ## Quick Example
 ```c
