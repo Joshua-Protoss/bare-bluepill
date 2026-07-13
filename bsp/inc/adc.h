@@ -2,6 +2,7 @@
 #define INC_ADC_H
 
 #include "common.h"
+#include "rcc.h"
 
 // ADC Base Addresses
 #define ADC1_BASE                           (PERIPHERAL_APB2_BASE + 0x2400U)
@@ -104,6 +105,7 @@ typedef enum {
 typedef struct{
     ADC_channel_t channel;              // Which channel to read
     ADC_sample_time_t sample_time;      // Sampling duration
+    rcc_adc_div_t prescaler;            // ADC Prescaler
     bool continuous;                    // Continuous or single conversion
 } ADC_config_t;
 
@@ -113,4 +115,10 @@ uint16_t adc_read(volatile ADC_reg_t *adc);
 void adc_start(volatile ADC_reg_t *adc);
 void adc_stop(volatile ADC_reg_t *adc);
 
+extern const ADC_config_t ADC_CH0_CNT_DEFAULT;
+
 #endif //INC_ADC_H
+
+        // uint16_t raw = adc_read(ADC1);
+        // uint32_t mv = (raw * 3300) / 4096;
+        // usart_printf(USART1, "ADC: %4lu mV (%4u raw) \r\n", mv, raw);

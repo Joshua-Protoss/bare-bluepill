@@ -30,7 +30,6 @@ typedef struct {
 #define USART_SR_TC              BIT(6)      // Transmission complete
 #define USART_SR_TXE             BIT(7)      // TX empty (ready for next byte)
 
-
 // USART CR1 bits
 #define USART_CR1_UE             BIT(13)
 #define USART_CR1_IDLEIE         BIT(4)      // A USART interrupt is generated whenever IDLE=1 in the USART_SR register
@@ -77,40 +76,3 @@ void usart_printf(volatile usart_reg_t *usart, const char *fmt, ...);
 extern const usart_config_t USART1_TX_RX_8BIT;
 
 #endif // INC_USART_H
-
-
-
-
-// void usart1_isr(void) {
-//     // === UART Echo ===
-//     if (USART1->SR & USART_SR_RXNE) {
-//         uint8_t c = (uint8_t)(USART1->DR & 0xFF);
-
-//         if (c == '\r' || c == '\n'){    // Enter pressed
-//             if (rx_index > 0) {
-//                 process_line(rx_buffer, rx_index);
-//             } else {
-//                 usart_write(USART1, msg_newline, sizeof(msg_newline)-1);
-//                 usart_write(USART1, msg_prompt2, sizeof(msg_prompt2)-1);
-//             }
-//             rx_index = 0;
-//         } else if (c == 8 || c == 127) {    // Backspace
-//             if (rx_index > 0) {
-//                 rx_index--;
-//                 usart_write_DR(USART1, '\b');
-//                 usart_write_DR(USART1, ' ');
-//                 usart_write_DR(USART1, '\b');
-//             }
-
-//         } else if (rx_index < RX_BUFF_SIZE - 1) {   // normal character --> save to buffer
-//             rx_buffer[rx_index++] = c;
-//             usart_write_DR(USART1, c);              // echo the character immediately
-//         }
-//     }
-// }
-
-// static void process_line(const volatile uint8_t *line, uint8_t length) {
-//     usart_write(USART1, msg_prefix, sizeof(msg_prefix)-1);
-//     usart_write(USART1, (const uint8_t*)line, length);
-//     usart_write(USART1, msg_suffix, sizeof(msg_suffix)-1);  // New prompt
-// }

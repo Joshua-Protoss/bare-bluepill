@@ -9,12 +9,12 @@
 #define RCC_BIT_MASK(encoded)                   BIT((encoded) & 0x1F)
 
 // registers offsets (STM32F103)
-#define RCC_CR_OFFSET            0x00
-#define RCC_CFGR_OFFSET          0x04
-#define RCC_CIR_OFFSET           0x08
-#define RCC_AHB_ENR_OFFSET       0x14
-#define RCC_APB1_ENR_OFFSET      0x1C
-#define RCC_APB2_ENR_OFFSET      0x18
+#define RCC_CR_OFFSET                           0x00
+#define RCC_CFGR_OFFSET                         0x04
+#define RCC_CIR_OFFSET                          0x08
+#define RCC_AHB_ENR_OFFSET                      0x14
+#define RCC_APB1_ENR_OFFSET                     0x1C
+#define RCC_APB2_ENR_OFFSET                     0x18
 
 // memory addresses
 #define RCC_BASE                                (0x40021000U)
@@ -28,40 +28,40 @@
 #define FLASH_ACR                               REG32(0x40022000)
 
 // RCC_CR BITS
-#define RCC_CR_HSION             BIT(0)
-#define RCC_CR_HSIRDY            BIT(1)
-#define RCC_CR_HSEON             BIT(16)
-#define RCC_CR_HSERDY            BIT(17)
-#define RCC_CR_HSEBYP            BIT(18)
-#define RCC_CR_CSSON             BIT(19)
-#define RCC_CR_PLLON             BIT(24)
-#define RCC_CR_PLLRDY            BIT(25)
+#define RCC_CR_HSION                            BIT(0)
+#define RCC_CR_HSIRDY                           BIT(1)
+#define RCC_CR_HSEON                            BIT(16)
+#define RCC_CR_HSERDY                           BIT(17)
+#define RCC_CR_HSEBYP                           BIT(18)
+#define RCC_CR_CSSON                            BIT(19)
+#define RCC_CR_PLLON                            BIT(24)
+#define RCC_CR_PLLRDY                           BIT(25)
 
 // RCC_CFGR hex bits and bit shift
-#define RCC_CFGR_SW_HSI         0x00
-#define RCC_CFGR_SW_HSE         0x01
-#define RCC_CFGR_SW_PLL         0x02
-#define RCC_CFGR_SWS_HSI        0x00
-#define RCC_CFGR_SWS_HSE        0x04
-#define RCC_CFGR_SWS_PLL        0x08
-#define RCC_CFGR_PLLSRC         BIT(16) 
-#define RCC_CFGR_PLLXTPRE       BIT(17)
+#define RCC_CFGR_SW_HSI                         0x00
+#define RCC_CFGR_SW_HSE                         0x01
+#define RCC_CFGR_SW_PLL                         0x02
+#define RCC_CFGR_SWS_HSI                        0x00
+#define RCC_CFGR_SWS_HSE                        0x04
+#define RCC_CFGR_SWS_PLL                        0x08
+#define RCC_CFGR_PLLSRC                         BIT(16) 
+#define RCC_CFGR_PLLXTPRE                       BIT(17)
 
 // RCC_CFGR bit positions
-#define RCC_CFGR_SW_SHIFT        0
-#define RCC_CFGR_HPRE_SHIFT      4       // AHB PRESCALER
-#define RCC_CFGR_PPRE1_SHIFT     8       // APB1 PRESCALER
-#define RCC_CFGR_PPRE2_SHIFT     11      // APB2 PRESCALER
-#define RCC_CFGR_ADCPRE_SHIFT    14      // ADC PRESCALER
-#define RCC_CFGR_PLLSRC_SHIFT    16 
-#define RCC_CFGR_PLLMUL_SHIFT    18      // PLL MULTIPLIER
-#define RCC_CFGR_USBPRE_SHIFT    22
+#define RCC_CFGR_SW_SHIFT                       0
+#define RCC_CFGR_HPRE_SHIFT                     4       // AHB PRESCALER
+#define RCC_CFGR_PPRE1_SHIFT                    8       // APB1 PRESCALER
+#define RCC_CFGR_PPRE2_SHIFT                    11      // APB2 PRESCALER
+#define RCC_CFGR_ADCPRE_SHIFT                   14      // ADC PRESCALER
+#define RCC_CFGR_PLLSRC_SHIFT                   16 
+#define RCC_CFGR_PLLMUL_SHIFT                   18      // PLL MULTIPLIER
+#define RCC_CFGR_USBPRE_SHIFT                   22   
 
 // FLASH_ACR bit shift positions
-#define FLASH_ACR_LATENCY_SHIFT  0
-#define FLASH_ACR_HLFCYA         BIT(3)
-#define FLASH_ACR_PRFTBE         BIT(4)
-#define FLASH_ACR_PRFTBS         BIT(5) 
+#define FLASH_ACR_LATENCY_SHIFT                 0
+#define FLASH_ACR_HLFCYA                        BIT(3)
+#define FLASH_ACR_PRFTBE                        BIT(4)
+#define FLASH_ACR_PRFTBS                        BIT(5) 
 
 // FLASH_ACR_LATENCY wait states
 #define FLASH_ACR_ZERO_WS       0x00    // if 0 < SYSCLK < 24MHz
@@ -185,6 +185,14 @@ typedef struct {
     rcc_apb_div_t apb1_div;
     rcc_apb_div_t apb2_div;
 } rcc_clock_config_t;
+
+// ADC Prescaler
+typedef enum {
+    RCC_CFGR_ADCPRE_DIV2 = 0x00,                        // 00: PCLK2 divided by 2
+    RCC_CFGR_ADCPRE_DIV4 = 0x01,                        // 01: PCLK2 divided by 4
+    RCC_CFGR_ADCPRE_DIV6 = 0x02,                        // 10: PCLK2 divided by 6
+    RCC_CFGR_ADCPRE_DIV8 = 0x03                         // 11: PCLK2 divided by 8
+} rcc_adc_div_t;
 
 // enable peripheral clock functions
 void rcc_periph_clock_enable(enum rcc_periph_clken encoded_clken);
