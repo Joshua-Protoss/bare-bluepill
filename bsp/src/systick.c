@@ -80,3 +80,9 @@ void systick_clear_counter(void){
 uint32_t systick_get_calib(void){
     return (SYSTICK->SYST_CALIB & SYSTICK_CALIB_TENMS);
 }
+
+void systick_delay_ms(uint32_t ms){
+    for (uint32_t i = 0; i < ms; i++) {
+        while(!systick_get_countflag());
+    }
+}

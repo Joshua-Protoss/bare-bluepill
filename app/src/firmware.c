@@ -6,8 +6,8 @@
 #include "usart.h"
 #include "dma.h"
 
-
-#define LED_PORT                        (PORT_GPIOA)       // this is an external LED connected to PA0
+#define SYSTICK_FREQ                    (1000)            // the desired systick frequency, 1000Hz means 1ms per tick  
+#define LED_PORT                        (PORT_GPIOA)      // this is an external LED connected to PA0
 #define LED_PIN                         (PIN_GPIO0)
 #define LED2_PORT                       (PORT_GPIOA) 
 #define LED2_PIN                        (PIN_GPIO1)       // TIM2_CH2
@@ -150,7 +150,7 @@ void process_command(const char *cmd){
 int main(void) {
     rcc_clock_configure(&RCC_CLOCK_HSE_44MHZ);
     gpio_setup();
-    systick_set_frequency(1000, rcc_get_ahb_freq()); // 1ms tick
+    systick_set_frequency(SYSTICK_FREQ, rcc_get_ahb_freq()); // 1ms tick, interrupt enabled by default
     uart_setup();
     dma_setup();
 
@@ -216,7 +216,8 @@ int main(void) {
             DMA1_Channel5->CMAR = (uint32_t) rx_buffer;
             DMA1_Channel5->CCR |= DMA_CCR_EN;
         }
-        
+
+        systick_delay_ms(1000);
        __asm__("wfi");  // Sleep, save power!
     }
     return 0;

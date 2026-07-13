@@ -38,5 +38,6 @@ void systick_interrupt_disable(void);
 bool systick_get_countflag(void);
 void systick_clear_counter(void);
 uint32_t systick_get_calib(void);
+void systick_delay_ms(uint32_t ms);
 
 #endif // INC_SYSTICK_H

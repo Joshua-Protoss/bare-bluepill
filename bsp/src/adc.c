@@ -12,12 +12,9 @@ void adc_init(volatile ADC_reg_t *adc, const ADC_config_t *config){
     // 2. Power on ADC (Wake up from power-down mode)
     adc->CR2 |= ADC_CR2_ADON; 
 
-    // Wait for ADC to stabilize (t_STAB = ~1μs)
-    for (volatile uint32_t i = 0; i < 1000; i++);
-
     // 3. Calibrate ADC
-    adc->CR2 |= ADC_CR2_RSTCAL;
-    while(adc->CR2 & ADC_CR2_RSTCAL);       // Wait for reset calibration complete
+    adc->CR2 |= ADC_CR2_RSTCAL;             // Reset calibration
+    while(adc->CR2 & ADC_CR2_RSTCAL);       // Wait for reset calibration complete (hardware clears)
 
     adc->CR2 |= ADC_CR2_CAL;
     while(adc->CR2 & ADC_CR2_CAL);          // Wait for calibration complete
@@ -41,12 +38,7 @@ void adc_init(volatile ADC_reg_t *adc, const ADC_config_t *config){
 
     // 6. Set continuous mode if requested
     if (config->continuous) {
-        adc->CR2 |= ADC_CR2_CONT;
-    }
-
-    // 7. Start conversion if continuous
-    if (config->continuous){
-        adc->CR2 |= ADC_CR2_SWSTART;
+        adc->CR2 |= ADC_CR2_CONT | ADC_CR2_SWSTART;
     }
 }
 
