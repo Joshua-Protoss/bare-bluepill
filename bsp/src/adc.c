@@ -102,8 +102,8 @@ const ADC_config_t ADC_CH0_TEST = {
 };
 
 // Initialize ADC1: Internal voltage, continuous mode
-const ADC_config_t ADC_CH17_VREFINT = {
-    .channel = ADC_CH16,                    // Internal voltage reference
+const ADC_config_t ADC_CH16_VREFINT = {
+    .channel = ADC_CH16,                    // Internal temperature
     .sample_time = ADC_SMP_239_5_CYCLES,
     .prescaler = RCC_CFGR_ADCPRE_DIV4,
     .continuous = true,
