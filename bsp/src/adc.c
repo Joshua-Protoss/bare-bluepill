@@ -1,27 +1,29 @@
 #include "adc.h"
 
 void adc_init(volatile ADC_reg_t *adc, const ADC_config_t *config){
-
+    
     // 1. Set ADC clock prescaler (must be ≤ 14 MHz!)
     RCC_CFGR &= ~(0x03 << RCC_CFGR_ADCPRE_SHIFT);          // Clear ADCPRE bits
     RCC_CFGR |= (config->prescaler << RCC_CFGR_ADCPRE_SHIFT);
-    
+
     // 2. Enable ADC clock
     if (adc == ADC1){
         rcc_periph_clock_enable(RCC_ADC1);
     } else if (adc == ADC2) {
         rcc_periph_clock_enable(RCC_ADC2);
     }   // if there is adc3 --> add another else if
-    
+
     // 3. Power on ADC (Wake up the peripheral from power-down mode)
     adc->CR2 |= ADC_CR2_ADON; 
-
     // Simple delay (no fancy assembly)
     for (volatile uint32_t i = 0; i < 10000; i++);
 
-    // second ADON
-    adc->CR2 |= ADC_CR2_ADON;
-    for (volatile uint32_t i = 0; i < 10000; i++);
+    // 3.5. Enable internal channels BEFORE calibration
+    if (config->channel >= ADC_CH16) {
+        adc->CR2 |= ADC_CR2_TSVREFE;
+        // CRITICAL: Long delay for internal channel wake-up!
+        for (volatile uint32_t i = 0; i < 100000; i++);
+    }   
 
     // 4. Calibrate ADC
     adc->CR2 |= ADC_CR2_RSTCAL;                                         // Reset calibration
@@ -50,9 +52,12 @@ void adc_init(volatile ADC_reg_t *adc, const ADC_config_t *config){
     if (config->continuous) {
         adc->CR2 |= ADC_CR2_CONT;
     }
+    
+    // second ADON writes triggers the actual start of conversion loop in continuous mode?
+    adc->CR2 |= ADC_CR2_ADON;
 
     // 8. Start conversion LAST
-    adc->CR2 |= ADC_CR2_SWSTART;
+    //adc->CR2 |= ADC_CR2_SWSTART;
 }
 
 uint16_t adc_read(volatile ADC_reg_t *adc){
@@ -63,7 +68,7 @@ uint16_t adc_read(volatile ADC_reg_t *adc){
     }
 
     // Read result (continuous mode always has latest value)
-    return (uint16_t)(adc->DR & 0xFFF);     // 12-bit result
+    return (uint16_t)(adc->DR);     // 12-bit result
 }
 
 void adc_start(volatile ADC_reg_t *adc){
@@ -74,9 +79,39 @@ void adc_stop(volatile ADC_reg_t *adc){
     adc->CR2 &= ~ADC_CR2_ADON;
 }
 
+int32_t convert_internal_temp(uint16_t adc_raw){
+    // Vdda = 3300 mV, 12-bit ADC = 4095
+    // V_sense (mV) = (adc_raw * 3300) / 4095
+    int32_t v_sense_mv = ((int32_t)adc_raw * 3300) / 4095;
+
+    // V25 = 1430 mV
+    // Avg_Slope = 4.3 mV/C (multiplied by 100 to preserve precision = 430)
+    // Formula scaled: Temp = ((V25 - V_sense) * 100) / 4.3 + 2500
+    // Simplified:     Temp = ((1430 - v_sense_mv) * 10000) / 430 + 2500
+    int32_t temp_hundredths = (((1430 - v_sense_mv) * 10000) / 430) + 2500;
+
+    return temp_hundredths;
+}
+
 // Initialize ADC1: Channel 0, continuous mode
-const ADC_config_t ADC_CH0_CNT_DEFAULT = {
+const ADC_config_t ADC_CH0_TEST = {
     .channel = ADC_CH0,
+    .sample_time = ADC_SMP_55_5_CYCLES,
+    .prescaler = RCC_CFGR_ADCPRE_DIV4,
+    .continuous = true,
+};
+
+// Initialize ADC1: Internal voltage, continuous mode
+const ADC_config_t ADC_CH17_VREFINT = {
+    .channel = ADC_CH16,                    // Internal voltage reference
+    .sample_time = ADC_SMP_239_5_CYCLES,
+    .prescaler = RCC_CFGR_ADCPRE_DIV4,
+    .continuous = true,
+};
+
+// Initialize ADC1: Channel 1, continuous mode
+const ADC_config_t ADC_CH1_TEST = {
+    .channel = ADC_CH1,             // PA1 instead of PA0
     .sample_time = ADC_SMP_55_5_CYCLES,
     .prescaler = RCC_CFGR_ADCPRE_DIV4,
     .continuous = true,

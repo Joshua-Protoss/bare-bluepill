@@ -114,8 +114,11 @@ void adc_init(volatile ADC_reg_t *adc, const ADC_config_t *config);
 uint16_t adc_read(volatile ADC_reg_t *adc);
 void adc_start(volatile ADC_reg_t *adc);
 void adc_stop(volatile ADC_reg_t *adc);
+int32_t convert_internal_temp(uint16_t adc_raw);
 
-extern const ADC_config_t ADC_CH0_CNT_DEFAULT;
+extern const ADC_config_t ADC_CH0_TEST;
+extern const ADC_config_t ADC_CH17_VREFINT;
+extern const ADC_config_t ADC_CH1_TEST;
 
 #endif //INC_ADC_H
 

@@ -8,7 +8,7 @@
 
 #define SYSTICK_FREQ                    (1000)            // the desired systick frequency, 1000Hz means 1ms per tick  
 #define ADC_PORT                        (PORT_GPIOA)      // this is an external LED connected to PA0
-#define ADC_PIN                         (PIN_GPIO0)
+#define ADC_PIN                         (PIN_GPIO1)
 
 volatile uint32_t systick_ticks = 0;
 
@@ -48,25 +48,33 @@ void adc_setup(){
     gpio_set_mode(ADC_PORT, ADC_PIN, GPIO_MODE_INPUT, GPIO_CNF_INPUT_ANALOG);
 
     // Initialize ADC1: Channel 0, continuous mode
-    adc_init(ADC1, &ADC_CH0_CNT_DEFAULT);
+    adc_init(ADC1, &ADC_CH17_VREFINT);
     adc_start(ADC1);
 
-    // FORCE SWSTART directly!
-    //ADC1->CR2 = 0x00400003;  // ADON | CONT | SWSTART all at once!
+    // Wait for first conversion
+    while(!(ADC1->SR & ADC_SR_EOC));
+    
+    // Now read
+    uint16_t val = ADC1->DR;
+    usart_printf(USART1, "First reading: %u\r\n", val);
 
-    //RCC_CFGR = (RCC_CFGR & ~(0x03 << 14)) | (0x02 << 14);
     volatile uint32_t apb2_after = RCC_APB2_ENR;
     volatile uint32_t cr2 = ADC1->CR2;
     volatile uint32_t sr  = ADC1->SR;
     volatile uint32_t sqr3 = ADC1->SQR3;
     volatile uint32_t cfgr = RCC_CFGR;
     volatile uint32_t smpr2 = ADC1->SMPR2;
+    volatile uint32_t smpr1 = ADC1->SMPR1;
     usart_printf(USART1, "CR2: 0x%08lX\r\n", cr2);
     usart_printf(USART1, "SR:  0x%08lX\r\n", sr);
     usart_printf(USART1, "SQR3: 0x%08lX\r\n", sqr3);
     usart_printf(USART1, "RCC_CFGR: 0x%08lX\r\n", cfgr);
     usart_printf(USART1, "SMPR2: 0x%08lX\r\n", smpr2);
+    usart_printf(USART1, "SMPR1: 0x%08lX\r\n", smpr1);
     usart_printf(USART1, "APB2 before: 0x%08lX, after: 0x%08lX\r\n", apb2_before, apb2_after);
+
+    volatile uint32_t crl = PORT_GPIOA->CRL;
+    usart_printf(USART1, "GPIOA_CRL: 0x%08lX\r\n", crl);
 
 }
 
@@ -75,19 +83,15 @@ int main(void) {
     systick_set_frequency(SYSTICK_FREQ, rcc_get_ahb_freq()); // 1ms tick, interrupt enabled by default
     uart_setup();
     adc_setup();
-    systick_delay_ms(500);
-
-    // Read the live data from the continuous converter
-    uint16_t adc_val = adc_read(ADC1);
-    uint32_t live_sr = ADC1->SR;
-    
-    // Print the live conversions onto your terminal!
-    usart_printf(USART1, "ADC Raw: %u | Live SR: 0x%02lX\r\n", adc_val, live_sr);
 
     while(1){
-
+        // Read the live data from the continuous converter
+        uint16_t adc_val = adc_read(ADC1);
+        uint32_t live_sr = ADC1->SR;
+        
+        // Print the live conversions onto your terminal!
+        usart_printf(USART1, "ADC Raw: %u | Live SR: 0x%02lX\r\n", adc_val, live_sr);
         systick_delay_ms(500);
-       __asm__("wfi");  // Sleep, save power!
     }
     return 0;
 }
