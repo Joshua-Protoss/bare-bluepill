@@ -90,6 +90,10 @@ int32_t convert_internal_temp(uint16_t adc_raw){
     // Simplified:     Temp = ((1430 - v_sense_mv) * 10000) / 430 + 2500
     int32_t temp_hundredths = (((1430 - v_sense_mv) * 10000) / 430) + 2500;
 
+    // Display as Celsius with 2 decimal places:
+    //int32_t temp_whole = temp / 100;      // 34
+    //int32_t temp_frac = temp % 100;       // 76
+
     return temp_hundredths;
 }
 

@@ -48,7 +48,7 @@ void adc_setup(){
     gpio_set_mode(ADC_PORT, ADC_PIN, GPIO_MODE_INPUT, GPIO_CNF_INPUT_ANALOG);
 
     // Initialize ADC1: Channel 0, continuous mode
-    adc_init(ADC1, &ADC_CH16_VREFINT);
+    adc_init(ADC1, &ADC_CH1_TEST);
     adc_start(ADC1);
 
     // Wait for first conversion
@@ -85,17 +85,9 @@ int main(void) {
     adc_setup();
 
     while(1){
-        // Read the live data from the continuous converter
-        uint16_t adc_val = adc_read(ADC1);
-        uint32_t live_sr = ADC1->SR;
-        uint32_t temp = convert_internal_temp(adc_val);
-
-        // Display as Celsius with 2 decimal places:
-        int32_t temp_whole = temp / 100;      // 34
-        int32_t temp_frac = temp % 100;       // 76
-        
-        // Print the live conversions onto your terminal!
-        usart_printf(USART1, "Temp: %ld.%02ld C | ADC Raw: %u | Live SR: 0x%02lX\r\n", temp_whole, temp_frac, adc_val, live_sr);
+        uint16_t raw = adc_read(ADC1);
+        uint32_t mv = (raw * 3300) / 4096;
+        usart_printf(USART1, "PA1: %lu mV (%u raw)\r\n", mv, raw);
         systick_delay_ms(500);
     }
     return 0;
