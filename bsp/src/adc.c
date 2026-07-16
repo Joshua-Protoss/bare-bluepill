@@ -7,31 +7,26 @@ void adc_init(volatile ADC_reg_t *adc, const ADC_config_t *config){
     RCC_CFGR |= (config->prescaler << RCC_CFGR_ADCPRE_SHIFT);
 
     // 2. Enable ADC clock
-    if (adc == ADC1){
-        rcc_periph_clock_enable(RCC_ADC1);
-    } else if (adc == ADC2) {
-        rcc_periph_clock_enable(RCC_ADC2);
-    }   // if there is adc3 --> add another else if
+    rcc_periph_clock_enable(adc == ADC1 ? RCC_ADC1 : RCC_ADC2);
 
-    // 3. Power on ADC (Wake up the peripheral from power-down mode)
+    // 3. Power on ADC (Wake up the peripheral from power-down mode) + small delay at least 3-4 microseconds
     adc->CR2 |= ADC_CR2_ADON; 
-    // Simple delay (no fancy assembly)
     for (volatile uint32_t i = 0; i < 10000; i++);
 
-    // 3.5. Enable internal channels BEFORE calibration
+    // 4. Enable internal channels BEFORE calibration
     if (config->channel >= ADC_CH16) {
         adc->CR2 |= ADC_CR2_TSVREFE;
         // CRITICAL: Long delay for internal channel wake-up!
         for (volatile uint32_t i = 0; i < 100000; i++);
     }   
 
-    // 4. Calibrate ADC
+    // 5. Calibrate ADC
     adc->CR2 |= ADC_CR2_RSTCAL;                                         // Reset calibration
     while(adc->CR2 & ADC_CR2_RSTCAL);                                   // Wait for reset calibration complete (hardware clears)
     adc->CR2 |= ADC_CR2_CAL;
     while(adc->CR2 & ADC_CR2_CAL);                                      // Wait for calibration complete
 
-    // 5. Set sample time for the channel
+    // 6. Set sample time for the channel
     if (config->channel <= ADC_CH9) {
         // Channels 0-9 use SMPR2
         uint32_t shift = (config->channel) * 3;
@@ -44,20 +39,17 @@ void adc_init(volatile ADC_reg_t *adc, const ADC_config_t *config){
         adc->SMPR1 |= (config->sample_time << shift);
     }
 
-    // 6. Configure regular sequence: 1 conversion, 1 channel
-    adc->SQR1 = (0 << 20);          // 1 conversion (L[3:0] = 0 = 1 conversion)
-    adc->SQR3 = config->channel;    // Only channel in sequence
+    // 7. Configure regular sequence: 1 conversion, 1 channel
+    adc->SQR1 = (0 << ADC_SQR1_CONV_NUM_SHIFT);          // 1 conversion (L[3:0] = 0 = 1 conversion)
+    adc->SQR3 = config->channel;                         // Clear SQ1-SQ6 and only set 1 channel in sequence
 
-    // 7. Set continuous mode if requested
+    // 8. Set continuous mode if requested
     if (config->continuous) {
         adc->CR2 |= ADC_CR2_CONT;
     }
     
-    // second ADON writes triggers the actual start of conversion loop in continuous mode?
+    // second ADON writes triggers the actual start of conversion loop in continuous mode
     adc->CR2 |= ADC_CR2_ADON;
-
-    // 8. Start conversion LAST
-    //adc->CR2 |= ADC_CR2_SWSTART;
 }
 
 uint16_t adc_read(volatile ADC_reg_t *adc){
@@ -69,6 +61,82 @@ uint16_t adc_read(volatile ADC_reg_t *adc){
 
     // Read result (continuous mode always has latest value)
     return (uint16_t)(adc->DR);     // 12-bit result
+}
+
+void adc_scan_init(volatile ADC_reg_t *adc, const ADC_scan_config_t *config){
+
+    // 1. Set ADC clock prescaler (must be ≤ 14 MHz!)
+    RCC_CFGR &= ~(0x03 << RCC_CFGR_ADCPRE_SHIFT);           // Clear ADCPRE bits
+    RCC_CFGR |= (config->prescaler << RCC_CFGR_ADCPRE_SHIFT);
+
+    // 2. Enable ADC clock
+    rcc_periph_clock_enable(adc == ADC1 ? RCC_ADC1 : RCC_ADC2);
+
+    // 3. Power on ADC (Wake up the peripheral from power-down mode) + small delay at least 3-4 microseconds
+    adc->CR2 |= ADC_CR2_ADON;
+    for (volatile uint32_t i = 0; i < 10000; i++);
+
+    // 4. Enable internal channels BEFORE calibration if any channel >= 16
+    for (uint8_t i = 0; i < config->num_channels; i++) {
+        if(config->channels[i] >= ADC_CH16) {
+            adc->CR2 |= ADC_CR2_TSVREFE;
+            // CRITICAL: Long delay for internal channel wake-up!
+            for (volatile uint32_t i = 0; i < 100000; i++);
+            break;
+        }
+    }
+
+    // 5. Calibrate ADC
+    adc->CR2 |= ADC_CR2_RSTCAL;                                 // Reset calibration 
+    while(!(adc->CR2 & ADC_CR2_RSTCAL));                        // Wait for reset calibration complete (hardware clears)
+    adc->CR2 |= ADC_CR2_CAL;
+    while(!(adc->CR2 & ADC_CR2_CAL));                           // Wait for calibration complete
+
+    // 6. Set sample time for ALL channels
+    for (uint8_t i = 0; i < config->num_channels; i++) {
+        if (config->channels[i] <= ADC_CH9) {
+            // channels[i]s 0-9 use SMPR2
+            uint32_t shift = (config->channels[i]) * 3;
+            adc->SMPR2 &= ~(0x07 << shift);
+            adc->SMPR2 |= (config->sample_time << shift);
+        } else {
+            // channels[i]s 10-17 use SMPR1
+            uint32_t shift = (config->channels[i] - 10) * 3;
+            adc->SMPR1 &= ~(0x07 << shift);
+            adc->SMPR1 |= (config->sample_time << shift);
+        }
+    }
+
+    // 7. Configure scan sequence, SQR1: bits 23-20 = number of conversions (1-16)
+    uint8_t n = config->num_channels;
+    adc->SQR1 = ((n - 1) << ADC_SQR1_CONV_NUM_SHIFT);
+
+    // Clear all SQ bits first
+    adc->SQR1 &= ~0x000FFFFF;                                   // Clear SQ13-SQ16
+    adc->SQR2 = 0;                                              // Clear SQ7-SQ12
+    adc->SQR3 = 0;                                              // Clear SQ1-SQ6
+
+    // Fill in sequence
+    for (uint8_t i = 0; i < n; i++) {
+        uint8_t sq_num = i + 1;                                             // increment SQ, SQ1, SQ2, SQ3
+
+        if (sq_num <= 6) {                                                  // SQ1-SQ6 go in SQR3
+            adc->SQR3 |= (config->channels[i] << ((sq_num - 1) * 5));
+        } else if (sq_num <= 12) {                                          // SQ7-SQ12 go in SQR2
+            adc->SQR2 |= (config->channels[i] << ((sq_num - 7) * 5));
+        } else {                                                            // SQ13-SQ16 go in SQR1
+            adc->SQR1 |= (config->channels[i] << ((sq_num - 13) * 5));
+        }
+    }
+
+    // 8. Enable scan mode in CR1
+    adc->CR1 |= ADC_CR1_SCAN;
+
+    if (config->continuous) {                   // Set continuous mode if requested
+        adc->CR2 |= ADC_CR2_CONT;
+    }
+
+    adc->CR2 |= ADC_CR2_ADON;                   // Second ADON to start conversion
 }
 
 void adc_start(volatile ADC_reg_t *adc){
@@ -117,6 +185,15 @@ const ADC_config_t ADC_CH16_VREFINT = {
 const ADC_config_t ADC_CH1_TEST = {
     .channel = ADC_CH1,             // PA1 instead of PA0
     .sample_time = ADC_SMP_55_5_CYCLES,
+    .prescaler = RCC_CFGR_ADCPRE_DIV4,
+    .continuous = true,
+};
+
+// Initialize ADC1: scan mode
+const ADC_scan_config_t ADC_SCAN_TEST = {
+    .channels = {ADC_CH1, ADC_CH16},            // CH1 : potentiometer, CH16 : internal temperature sensor
+    .num_channels = 2,
+    .sample_time = ADC_SMP_7_5_CYCLES,
     .prescaler = RCC_CFGR_ADCPRE_DIV4,
     .continuous = true,
 };

@@ -67,6 +67,8 @@ typedef struct {
 #define ADC_CR2_EXTSEL_TIM8_TRGO           (0x06 << 17)    // 110: EXTI line 11/TIM8_TRGO event not available in bluepill
 #define ADC_CR2_EXTSEL_SWSTART             (0x07 << 17)    // 111: SWSTART
 
+#define ADC_SQR1_CONV_NUM_SHIFT            (20U)            // L[3:0]: Regular channel sequence length
+
 // ===== SMPR Sample Times =====
 typedef enum {
     ADC_SMP_1_5_CYCLES = 0x00,          // 1.5 ADC cycles
@@ -101,17 +103,27 @@ typedef enum {
     ADC_CH17 = 17,      // VREFINT
 } ADC_channel_t;
 
-// ADC Configuration
-typedef struct{
+// ADC Single Mode Configuration
+typedef struct {
     ADC_channel_t channel;              // Which channel to read
     ADC_sample_time_t sample_time;      // Sampling duration
     rcc_adc_div_t prescaler;            // ADC Prescaler
     bool continuous;                    // Continuous or single conversion
 } ADC_config_t;
 
+// ADC Scan Mode Configuration
+typedef struct {
+    uint8_t num_channels;               // How many channels to scan (1-16)
+    ADC_channel_t channels[16];         // Channel list in scan order
+    ADC_sample_time_t sample_time;      // Same sample time for all channels
+    rcc_adc_div_t prescaler;            // ADC Prescaler
+    bool continuous;                    // Continuous or single conversion
+} ADC_scan_config_t;
+
 // Function Prototypes
 void adc_init(volatile ADC_reg_t *adc, const ADC_config_t *config);
 uint16_t adc_read(volatile ADC_reg_t *adc);
+void adc_scan_init(volatile ADC_reg_t *adc, const ADC_scan_config_t *config);
 void adc_start(volatile ADC_reg_t *adc);
 void adc_stop(volatile ADC_reg_t *adc);
 int32_t convert_internal_temp(uint16_t adc_raw);
