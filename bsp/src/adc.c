@@ -52,17 +52,6 @@ void adc_init(volatile ADC_reg_t *adc, const ADC_config_t *config){
     adc->CR2 |= ADC_CR2_ADON;
 }
 
-uint16_t adc_read(volatile ADC_reg_t *adc){
-    // For single conversion: start, wait, read
-    if (!(adc->CR2 & ADC_CR2_CONT)) {
-        adc->CR2 |= ADC_CR2_SWSTART;        // Start conversion
-        while(!(adc->SR & ADC_SR_EOC));     // Wait for completion
-    }
-
-    // Read result (continuous mode always has latest value)
-    return (uint16_t)(adc->DR);     // 12-bit result
-}
-
 void adc_scan_init(volatile ADC_reg_t *adc, const ADC_scan_config_t *config){
 
     // 1. Set ADC clock prescaler (must be ≤ 14 MHz!)
@@ -88,9 +77,9 @@ void adc_scan_init(volatile ADC_reg_t *adc, const ADC_scan_config_t *config){
 
     // 5. Calibrate ADC
     adc->CR2 |= ADC_CR2_RSTCAL;                                 // Reset calibration 
-    while(!(adc->CR2 & ADC_CR2_RSTCAL));                        // Wait for reset calibration complete (hardware clears)
+    while(adc->CR2 & ADC_CR2_RSTCAL);                        // Wait for reset calibration complete (hardware clears)
     adc->CR2 |= ADC_CR2_CAL;
-    while(!(adc->CR2 & ADC_CR2_CAL));                           // Wait for calibration complete
+    while(adc->CR2 & ADC_CR2_CAL);                           // Wait for calibration complete
 
     // 6. Set sample time for ALL channels
     for (uint8_t i = 0; i < config->num_channels; i++) {
@@ -132,11 +121,42 @@ void adc_scan_init(volatile ADC_reg_t *adc, const ADC_scan_config_t *config){
     // 8. Enable scan mode in CR1
     adc->CR1 |= ADC_CR1_SCAN;
 
-    if (config->continuous) {                   // Set continuous mode if requested
+    if (config->continuous) {                       // Set continuous mode if requested
         adc->CR2 |= ADC_CR2_CONT;
+        adc->CR2 |= ADC_CR2_ADON;                       // Second ADON to start conversion
     }
 
-    adc->CR2 |= ADC_CR2_ADON;                   // Second ADON to start conversion
+}
+
+void adc_scan_read(volatile ADC_reg_t *adc, uint16_t *buffer, uint8_t count) {
+    if(!(adc->CR2 & ADC_CR2_CONT)) {
+        // Wait for any ongoing conversion to finish
+        while(adc->SR & ADC_SR_STRT);                               // Wait for STRT=0 (not busy)
+        adc->CR2 |= ADC_CR2_ADON;
+        adc->CR2 |= ADC_CR2_SWSTART;                                // Single scan: start and read each result
+        // Debug: Check if SWSTART was accepted
+        volatile uint32_t cr2_check = adc->CR2;
+        // Should show SWSTART bit set
+        for (uint8_t i = 0; i < count; i++) {
+            while(!(adc->SR & ADC_SR_EOC));                         // Wait for completion
+            buffer[i] = (uint16_t) (adc->DR & 0xFFF);
+        }
+    } else {
+        // Continuous scan: DR only has the LAST channel!
+        // You need DMA for multi-channel continuous mode!
+        buffer[0] = (uint16_t) (adc->DR & 0xFFF);                   // Only last channel available!
+    }
+}
+
+uint16_t adc_read(volatile ADC_reg_t *adc){
+    // For single conversion: start, wait, read
+    if (!(adc->CR2 & ADC_CR2_CONT)) {
+        adc->CR2 |= ADC_CR2_SWSTART;                                // Start conversion
+        while(!(adc->SR & ADC_SR_EOC));                             // Wait for completion
+    }
+
+    // Read result (continuous mode always has latest value)
+    return (uint16_t)(adc->DR);     // 12-bit result
 }
 
 void adc_start(volatile ADC_reg_t *adc){
@@ -193,7 +213,7 @@ const ADC_config_t ADC_CH1_TEST = {
 const ADC_scan_config_t ADC_SCAN_TEST = {
     .channels = {ADC_CH1, ADC_CH16},            // CH1 : potentiometer, CH16 : internal temperature sensor
     .num_channels = 2,
-    .sample_time = ADC_SMP_7_5_CYCLES,
+    .sample_time = ADC_SMP_239_5_CYCLES,
     .prescaler = RCC_CFGR_ADCPRE_DIV4,
-    .continuous = true,
+    .continuous = false,
 };

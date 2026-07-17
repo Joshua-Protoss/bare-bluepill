@@ -37,7 +37,7 @@ void uart_setup(){
     usart_write(USART1, msg_welcome, sizeof(msg_welcome)-1);
     usart_write(USART1, msg_prompt, sizeof(msg_prompt)-1);
     usart_printf(USART1, "SysClk: %lu Hz\r\n", rcc_get_sysclk_freq());
-    usart_printf(USART1, "Hello! APB2: %lu Hz\r\n", rcc_get_apb2_freq());
+    usart_printf(USART1, "APB2: %lu Hz\r\n", rcc_get_apb2_freq());
     usart_write(USART1, msg_prompt2, sizeof(msg_prompt2) - 1);
 }
 
@@ -48,23 +48,17 @@ void adc_setup(){
     gpio_set_mode(ADC_PORT, ADC_PIN, GPIO_MODE_INPUT, GPIO_CNF_INPUT_ANALOG);
 
     // Initialize ADC1: Channel 0, continuous mode
-    adc_init(ADC1, &ADC_CH1_TEST);
-    adc_start(ADC1);
-
-    // Wait for first conversion
-    while(!(ADC1->SR & ADC_SR_EOC));
-    
-    // Now read
-    uint16_t val = ADC1->DR;
-    usart_printf(USART1, "First reading: %u\r\n", val);
+    adc_scan_init(ADC1, &ADC_SCAN_TEST);
 
     volatile uint32_t apb2_after = RCC_APB2_ENR;
+    volatile uint32_t cr1 = ADC1->CR1;
     volatile uint32_t cr2 = ADC1->CR2;
     volatile uint32_t sr  = ADC1->SR;
     volatile uint32_t sqr3 = ADC1->SQR3;
     volatile uint32_t cfgr = RCC_CFGR;
     volatile uint32_t smpr2 = ADC1->SMPR2;
     volatile uint32_t smpr1 = ADC1->SMPR1;
+    usart_printf(USART1, "CR1: 0x%08lX\r\n", cr1);
     usart_printf(USART1, "CR2: 0x%08lX\r\n", cr2);
     usart_printf(USART1, "SR:  0x%08lX\r\n", sr);
     usart_printf(USART1, "SQR3: 0x%08lX\r\n", sqr3);
@@ -85,10 +79,13 @@ int main(void) {
     adc_setup();
 
     while(1){
-        uint16_t raw = adc_read(ADC1);
-        uint32_t mv = (raw * 3300) / 4096;
-        usart_printf(USART1, "PA1: %lu mV (%u raw)\r\n", mv, raw);
-        systick_delay_ms(500);
+        uint16_t results[2];
+        adc_scan_read(ADC1, results, 2);
+
+        usart_printf(USART1, "CH1: %lu mV | Temp: %ld.%02ld C\r\n",
+            (results[0] * 3300) / 4096,
+            convert_internal_temp(results[1]) / 100,
+            convert_internal_temp(results[1]) % 100);
     }
     return 0;
 }

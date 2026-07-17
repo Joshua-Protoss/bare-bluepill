@@ -38,8 +38,9 @@ typedef struct {
 
 // ===== SR Bits =====
 #define ADC_SR_AWD                          BIT(0)      // Analog Watchdog
-#define ADC_SR_EOC                          BIT(1)      // End of Conversion
+#define ADC_SR_EOC                          BIT(1)      // End of Conversion: This bit is set by hardware at the end of a group channel conversion (regular or injected). It is cleared by software or by reading the ADC_DR.
 #define ADC_SR_JEOC                         BIT(2)      // Injected End of Conversion
+#define ADC_SR_STRT                         BIT(4)      // STRT: Regular channel Start flag
 
 // ===== CR1 Bits =====
 #define ADC_CR1_EOCIE                       BIT(5)      // EOC Interrupt Enable
@@ -124,6 +125,7 @@ typedef struct {
 void adc_init(volatile ADC_reg_t *adc, const ADC_config_t *config);
 uint16_t adc_read(volatile ADC_reg_t *adc);
 void adc_scan_init(volatile ADC_reg_t *adc, const ADC_scan_config_t *config);
+void adc_scan_read(volatile ADC_reg_t *adc, uint16_t *buffer, uint8_t count);
 void adc_start(volatile ADC_reg_t *adc);
 void adc_stop(volatile ADC_reg_t *adc);
 int32_t convert_internal_temp(uint16_t adc_raw);
@@ -131,6 +133,7 @@ int32_t convert_internal_temp(uint16_t adc_raw);
 extern const ADC_config_t ADC_CH0_TEST;
 extern const ADC_config_t ADC_CH16_VREFINT;
 extern const ADC_config_t ADC_CH1_TEST;
+extern const ADC_scan_config_t ADC_SCAN_TEST;
 
 #endif //INC_ADC_H
 
