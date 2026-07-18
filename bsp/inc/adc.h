@@ -68,6 +68,7 @@ typedef struct {
 #define ADC_CR2_EXTSEL_TIM8_TRGO           (0x06 << 17)    // 110: EXTI line 11/TIM8_TRGO event not available in bluepill
 #define ADC_CR2_EXTSEL_SWSTART             (0x07 << 17)    // 111: SWSTART
 
+
 #define ADC_SQR1_CONV_NUM_SHIFT            (20U)            // L[3:0]: Regular channel sequence length
 
 // ===== SMPR Sample Times =====
@@ -136,6 +137,32 @@ extern const ADC_config_t ADC_CH1_TEST;
 extern const ADC_scan_config_t ADC_SCAN_TEST;
 
 #endif //INC_ADC_H
+
+        // uint16_t raw = adc_read(ADC1);
+        // uint32_t mv = (raw * 3300) / 4096;
+        // usart_printf(USART1, "ADC: %4lu mV (%4u raw) \r\n", mv, raw);
+
+    // adc_start(ADC1);
+
+    // while(!(ADC1->SR & ADC_SR_EOC));
+    // uint16_t val = ADC1->DR;
+    // val = (val * 3300) / 4096;
+    // usart_printf(USART1, "First reading: %lu mv\r\n", val);
+
+        // uint16_t results[2];
+        // adc_scan_read(ADC1, results, 2);
+
+        // usart_printf(USART1, "CH1: %lu mV | Temp: %ld.%02ld C | Raw Temp: %lu\r\n",
+        //     (results[0] * 3300) / 4096,
+        //     convert_internal_temp(results[1]) / 100,
+        //     convert_internal_temp(results[1]) % 100,
+        //     results[1]);
+
+
+    // while(!(ADC1->SR & ADC_SR_EOC));
+    // uint16_t val = ADC1->DR;
+    // uint32_t compute = (val * 3300) / 4096;
+    // usart_printf(USART1, "ADC: %4lu mV (%4u raw) \r\n", compute, val);
 
         // uint16_t raw = adc_read(ADC1);
         // uint32_t mv = (raw * 3300) / 4096;

@@ -26,6 +26,10 @@ void adc_init(volatile ADC_reg_t *adc, const ADC_config_t *config){
     adc->CR2 |= ADC_CR2_CAL;
     while(adc->CR2 & ADC_CR2_CAL);                                      // Wait for calibration complete
 
+    // 5.5 Set the EXTSEL bit
+    adc->CR2 &= ~ADC_CR2_EXTSEL_SWSTART;
+    adc->CR2 |= (ADC_CR2_EXTSEL_SWSTART | ADC_CR2_EXTTRIG);     // Set 111 AND enable trigger routing
+
     // 6. Set sample time for the channel
     if (config->channel <= ADC_CH9) {
         // Channels 0-9 use SMPR2
@@ -40,22 +44,20 @@ void adc_init(volatile ADC_reg_t *adc, const ADC_config_t *config){
     }
 
     // 7. Configure regular sequence: 1 conversion, 1 channel
-    adc->SQR1 = (0 << ADC_SQR1_CONV_NUM_SHIFT);          // 1 conversion (L[3:0] = 0 = 1 conversion)
-    adc->SQR3 = config->channel;                         // Clear SQ1-SQ6 and only set 1 channel in sequence
+    adc->SQR1 = (0 << ADC_SQR1_CONV_NUM_SHIFT);                 // 1 conversion (L[3:0] = 0 = 1 conversion)
+    adc->SQR3 = config->channel;                                // Clear SQ1-SQ6 and only set 1 channel in sequence
 
     // 8. Set continuous mode if requested
     if (config->continuous) {
         adc->CR2 |= ADC_CR2_CONT;
+        adc->CR2 |= ADC_CR2_ADON;                               // second ADON writes triggers the actual start of conversion loop in continuous mode
     }
-    
-    // second ADON writes triggers the actual start of conversion loop in continuous mode
-    adc->CR2 |= ADC_CR2_ADON;
 }
 
 void adc_scan_init(volatile ADC_reg_t *adc, const ADC_scan_config_t *config){
 
     // 1. Set ADC clock prescaler (must be ≤ 14 MHz!)
-    RCC_CFGR &= ~(0x03 << RCC_CFGR_ADCPRE_SHIFT);           // Clear ADCPRE bits
+    RCC_CFGR &= ~(0x03 << RCC_CFGR_ADCPRE_SHIFT);                       // Clear ADCPRE bits
     RCC_CFGR |= (config->prescaler << RCC_CFGR_ADCPRE_SHIFT);
 
     // 2. Enable ADC clock
@@ -69,17 +71,20 @@ void adc_scan_init(volatile ADC_reg_t *adc, const ADC_scan_config_t *config){
     for (uint8_t i = 0; i < config->num_channels; i++) {
         if(config->channels[i] >= ADC_CH16) {
             adc->CR2 |= ADC_CR2_TSVREFE;
-            // CRITICAL: Long delay for internal channel wake-up!
-            for (volatile uint32_t i = 0; i < 100000; i++);
+            for (volatile uint32_t d = 0; d < 100000; d++);             // CRITICAL: Long delay for internal channel wake-up!
             break;
         }
     }
 
     // 5. Calibrate ADC
     adc->CR2 |= ADC_CR2_RSTCAL;                                 // Reset calibration 
-    while(adc->CR2 & ADC_CR2_RSTCAL);                        // Wait for reset calibration complete (hardware clears)
+    while(adc->CR2 & ADC_CR2_RSTCAL);                           // Wait for reset calibration complete (hardware clears)
     adc->CR2 |= ADC_CR2_CAL;
-    while(adc->CR2 & ADC_CR2_CAL);                           // Wait for calibration complete
+    while(adc->CR2 & ADC_CR2_CAL);                              // Wait for calibration complete
+
+    // 5.5 Set the EXTSEL bit
+    adc->CR2 &= ~ADC_CR2_EXTSEL_SWSTART;
+    adc->CR2 |= (ADC_CR2_EXTSEL_SWSTART | ADC_CR2_EXTTRIG);     // Set 111 AND enable trigger routing
 
     // 6. Set sample time for ALL channels
     for (uint8_t i = 0; i < config->num_channels; i++) {
@@ -121,24 +126,18 @@ void adc_scan_init(volatile ADC_reg_t *adc, const ADC_scan_config_t *config){
     // 8. Enable scan mode in CR1
     adc->CR1 |= ADC_CR1_SCAN;
 
-    if (config->continuous) {                       // Set continuous mode if requested
+    if (config->continuous) {                                                   // Set continuous mode if requested
         adc->CR2 |= ADC_CR2_CONT;
-        adc->CR2 |= ADC_CR2_ADON;                       // Second ADON to start conversion
+        adc->CR2 |= ADC_CR2_ADON;                                               // Second ADON to start conversion
     }
-
 }
 
 void adc_scan_read(volatile ADC_reg_t *adc, uint16_t *buffer, uint8_t count) {
     if(!(adc->CR2 & ADC_CR2_CONT)) {
         // Wait for any ongoing conversion to finish
-        while(adc->SR & ADC_SR_STRT);                               // Wait for STRT=0 (not busy)
-        adc->CR2 |= ADC_CR2_ADON;
-        adc->CR2 |= ADC_CR2_SWSTART;                                // Single scan: start and read each result
-        // Debug: Check if SWSTART was accepted
-        volatile uint32_t cr2_check = adc->CR2;
-        // Should show SWSTART bit set
+        adc->CR2 |= ADC_CR2_SWSTART;                                    // Single scan: start and read each result
         for (uint8_t i = 0; i < count; i++) {
-            while(!(adc->SR & ADC_SR_EOC));                         // Wait for completion
+            while(!(adc->SR & ADC_SR_EOC));                             // Wait for completion
             buffer[i] = (uint16_t) (adc->DR & 0xFFF);
         }
     } else {
@@ -154,9 +153,7 @@ uint16_t adc_read(volatile ADC_reg_t *adc){
         adc->CR2 |= ADC_CR2_SWSTART;                                // Start conversion
         while(!(adc->SR & ADC_SR_EOC));                             // Wait for completion
     }
-
-    // Read result (continuous mode always has latest value)
-    return (uint16_t)(adc->DR);     // 12-bit result
+    return (uint16_t)(adc->DR);     // 12-bit result, Read result (continuous mode always has latest value)
 }
 
 void adc_start(volatile ADC_reg_t *adc){
@@ -181,7 +178,6 @@ int32_t convert_internal_temp(uint16_t adc_raw){
     // Display as Celsius with 2 decimal places:
     //int32_t temp_whole = temp / 100;      // 34
     //int32_t temp_frac = temp % 100;       // 76
-
     return temp_hundredths;
 }
 
@@ -206,7 +202,7 @@ const ADC_config_t ADC_CH1_TEST = {
     .channel = ADC_CH1,             // PA1 instead of PA0
     .sample_time = ADC_SMP_55_5_CYCLES,
     .prescaler = RCC_CFGR_ADCPRE_DIV4,
-    .continuous = true,
+    .continuous = false,
 };
 
 // Initialize ADC1: scan mode
@@ -215,5 +211,5 @@ const ADC_scan_config_t ADC_SCAN_TEST = {
     .num_channels = 2,
     .sample_time = ADC_SMP_239_5_CYCLES,
     .prescaler = RCC_CFGR_ADCPRE_DIV4,
-    .continuous = false,
+    .continuous = true,
 };

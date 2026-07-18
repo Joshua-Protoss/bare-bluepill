@@ -69,7 +69,6 @@ void adc_setup(){
 
     volatile uint32_t crl = PORT_GPIOA->CRL;
     usart_printf(USART1, "GPIOA_CRL: 0x%08lX\r\n", crl);
-
 }
 
 int main(void) {
@@ -81,11 +80,12 @@ int main(void) {
     while(1){
         uint16_t results[2];
         adc_scan_read(ADC1, results, 2);
-
-        usart_printf(USART1, "CH1: %lu mV | Temp: %ld.%02ld C\r\n",
-            (results[0] * 3300) / 4096,
-            convert_internal_temp(results[1]) / 100,
-            convert_internal_temp(results[1]) % 100);
+        //uint32_t mv = (raw * 3300) / 4096;
+        //usart_printf(USART1, "ADC: %4lu mV (%4u raw) \r\n", mv, raw);
+        int32_t temp1 = convert_internal_temp(results[0]) / 100;
+        int32_t temp2 = convert_internal_temp(results[0]) % 100;
+        usart_printf(USART1, "Temp: %ld.%02ld C | Raw Temp: %lu\r\n", temp1, temp2, results[0]);
+        systick_delay_ms(100);
     }
     return 0;
 }
