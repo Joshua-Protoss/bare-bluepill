@@ -12,18 +12,27 @@
 
 volatile uint32_t systick_ticks = 0;
 
+// DMA buffer for 2 channels
+static uint16_t adc_dma_buffer[2];
+static volatile bool dma_transfer_complete = false;
+
 // Pre-defined messages as uint8_t arrays
-static const uint8_t msg_welcome[] = "ADC: Potentiometer Readings Terminal\r\n";
-static const uint8_t msg_prompt[]  = "Type 'HELP' for commands:\r\n";
-static const uint8_t msg_prompt2[] = "\r\n>";
+static const uint8_t msg_welcome[] = "ADC DMA Scan Terminal\r\n";
+static const uint8_t msg_prompt[] = "\r\n>";
 
 void systick_handler(void){
     systick_ticks++;
 }
 
+void dma1_channel1_isr(void){
+    if (DMA1_Controller->ISR & DMA_ISR_TCIF(1)) {
+        DMA1_Controller->IFCR = DMA_IFCR_CTCIF(1);
+        dma_transfer_complete = true;
+    }
+}
+
 void uart_setup(){
     rcc_periph_clock_enable(RCC_GPIOA);
-    // USART Setup
     rcc_periph_clock_enable(RCC_USART1);
     // PA9 = TX (AF push-pull)
     gpio_set_mode(PORT_GPIOA, PIN_GPIO9, GPIO_MODE_OUTPUT_50MHZ, GPIO_CNF_OUTPUT_AF_PUSHPULL);
@@ -37,18 +46,17 @@ void uart_setup(){
     usart_write(USART1, msg_welcome, sizeof(msg_welcome)-1);
     usart_write(USART1, msg_prompt, sizeof(msg_prompt)-1);
     usart_printf(USART1, "SysClk: %lu Hz\r\n", rcc_get_sysclk_freq());
+    usart_printf(USART1, "DMA Scan: CH1 (PA1) + CH16 (Temp)\r\n");
     usart_printf(USART1, "APB2: %lu Hz\r\n", rcc_get_apb2_freq());
-    usart_write(USART1, msg_prompt2, sizeof(msg_prompt2) - 1);
 }
 
 void adc_setup(){
     // Configure PA0 as analog input
-    volatile uint32_t apb2_before = RCC_APB2_ENR;
     rcc_periph_clock_enable(RCC_GPIOA);
     gpio_set_mode(ADC_PORT, ADC_PIN, GPIO_MODE_INPUT, GPIO_CNF_INPUT_ANALOG);
 
     // Initialize ADC1: Channel 0, continuous mode
-    adc_scan_init(ADC1, &ADC_SCAN_TEST);
+    adc_scan_dma_init(ADC1, &ADC_DMA_SCAN_TEST, DMA1_Channel1, (uint16_t *)adc_dma_buffer);
 
     volatile uint32_t apb2_after = RCC_APB2_ENR;
     volatile uint32_t cr1 = ADC1->CR1;
@@ -65,7 +73,7 @@ void adc_setup(){
     usart_printf(USART1, "RCC_CFGR: 0x%08lX\r\n", cfgr);
     usart_printf(USART1, "SMPR2: 0x%08lX\r\n", smpr2);
     usart_printf(USART1, "SMPR1: 0x%08lX\r\n", smpr1);
-    usart_printf(USART1, "APB2 before: 0x%08lX, after: 0x%08lX\r\n", apb2_before, apb2_after);
+    usart_printf(USART1, "APB2: 0x%08lX\r\n", apb2_after);
 
     volatile uint32_t crl = PORT_GPIOA->CRL;
     usart_printf(USART1, "GPIOA_CRL: 0x%08lX\r\n", crl);
@@ -78,14 +86,17 @@ int main(void) {
     adc_setup();
 
     while(1){
-        uint16_t results[2];
-        adc_scan_read(ADC1, results, 2);
-        //uint32_t mv = (raw * 3300) / 4096;
-        //usart_printf(USART1, "ADC: %4lu mV (%4u raw) \r\n", mv, raw);
-        int32_t temp1 = convert_internal_temp(results[0]) / 100;
-        int32_t temp2 = convert_internal_temp(results[0]) % 100;
-        usart_printf(USART1, "Temp: %ld.%02ld C | Raw Temp: %lu\r\n", temp1, temp2, results[0]);
-        systick_delay_ms(100);
+        // DMA is constantly updating adc_dma_buffer in the background!
+        // Just read the latest values whenever we want:
+        uint16_t ch1_raw = adc_dma_buffer[0];           // Potentiometer
+        uint16_t ch16_raw = adc_dma_buffer[1];          // Temperature
+        uint32_t ch1_mv = (ch1_raw * 3300) / 4096;
+        int32_t temp = convert_internal_temp(ch16_raw);
+
+        usart_printf(USART1, "CH1: %lu mv (%u) | Temp: %ld.%02ld C (%u)\r\n",
+                    ch1_mv, ch1_raw, temp / 100, temp % 100, ch16_raw);
+
+        systick_delay_ms(200);
     }
     return 0;
 }

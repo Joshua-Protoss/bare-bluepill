@@ -3,6 +3,7 @@
 
 #include "common.h"
 #include "rcc.h"
+#include "dma.h"
 
 // ADC Base Addresses
 #define ADC1_BASE                           (PERIPHERAL_APB2_BASE + 0x2400U)
@@ -127,14 +128,18 @@ void adc_init(volatile ADC_reg_t *adc, const ADC_config_t *config);
 uint16_t adc_read(volatile ADC_reg_t *adc);
 void adc_scan_init(volatile ADC_reg_t *adc, const ADC_scan_config_t *config);
 void adc_scan_read(volatile ADC_reg_t *adc, uint16_t *buffer, uint8_t count);
+void adc_scan_dma_init(volatile ADC_reg_t *adc, const ADC_scan_config_t *config, volatile DMA_Channel_reg_t *dma_channel, uint16_t *buffer);
+void adc_scan_dma_start(volatile ADC_reg_t *adc);
 void adc_start(volatile ADC_reg_t *adc);
 void adc_stop(volatile ADC_reg_t *adc);
 int32_t convert_internal_temp(uint16_t adc_raw);
+
 
 extern const ADC_config_t ADC_CH0_TEST;
 extern const ADC_config_t ADC_CH16_VREFINT;
 extern const ADC_config_t ADC_CH1_TEST;
 extern const ADC_scan_config_t ADC_SCAN_TEST;
+extern const ADC_scan_config_t ADC_DMA_SCAN_TEST;
 
 #endif //INC_ADC_H
 

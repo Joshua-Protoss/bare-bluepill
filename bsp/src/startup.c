@@ -89,7 +89,6 @@ void bus_fault_handler(void) {
 }
 
 void hard_fault_handler(void) __attribute__((weak, used, alias("default_handler")));
-//void bus_fault_handler(void) __attribute__((weak, used, alias("default_handler")));
 void dma1_channel1_isr(void) __attribute__((weak, used, alias("default_handler")));
 void dma1_channel2_isr(void) __attribute__((weak, used, alias("default_handler")));
 void dma1_channel3_isr(void) __attribute__((weak, used, alias("default_handler")));
