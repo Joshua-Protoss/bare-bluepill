@@ -60,6 +60,7 @@ typedef struct {
 #define ADC_CR2_TSVREFE                     BIT(23)     // Temperature Sensor Enable
 
 // External trigger sources for CR2_EXTSEL
+#define ADC_CR2_EXTSEL_MASK                (0x07 << 17)    // Clear EXTSEK bits
 #define ADC_CR2_EXTSEL_TIM1_CC1            (0x00 << 17)    // 000: Timer 1 CC1 event
 #define ADC_CR2_EXTSEL_TIM1_CC2            (0x01 << 17)    // 001: Timer 1 CC2 event
 #define ADC_CR2_EXTSEL_TIM1_CC3            (0x02 << 17)    // 010: Timer 1 CC3 event

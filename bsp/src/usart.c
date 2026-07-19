@@ -15,10 +15,8 @@ void usart_init(volatile usart_reg_t *usart, uint32_t baud_rate, const usart_con
 
     // Configure stopbits at CR2
     usart->CR2 = config->stopbits;
-
     // Configure flow control at CR3
     usart->CR3 = config->flow_control;
-
     // Enable USART, Transmitter, and Receiver
     usart->CR1 = USART_CR1_UE | config->mode | config->databits | config->parity;
 }
