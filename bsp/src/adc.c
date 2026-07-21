@@ -1,5 +1,15 @@
 #include "adc.h"
 
+/* IMPORTANT NOTE for STM32 Bluepill ADC : You have to set ADC_CR2_EXTTRIG bit to 1 and set the EXTSEL bits to 111
+   in order to use SWSTART as trigger. If ADC_CR2_CONT is set to 1, you only need to trigger SWSTART once. 
+   Alternatively, you can set ADC_CR2_ADON a second time to start adc conversion.
+   NEVER set ADC_CR2_ADON to 1 a second time while at the same time setting other CR2 bits. Set the other CR2 bits first
+   before starting the conversion with ADC_CR2_ADON.
+   adc->CR2 |= ADC_CR2_CONT | ADC_CR2_DMA | ADC_CR2_ADON;     <---- BAD IDEA
+
+   yuri, 21-07-2026
+ */
+
 void adc_init(volatile ADC_reg_t *adc, const ADC_config_t *config){
     
     // 1. Set ADC clock prescaler (must be ≤ 14 MHz!)
@@ -27,8 +37,8 @@ void adc_init(volatile ADC_reg_t *adc, const ADC_config_t *config){
     while(adc->CR2 & ADC_CR2_CAL);                                      // Wait for calibration complete
 
     // 5.5 Set the EXTSEL bit
-    adc->CR2 &= ~ADC_CR2_EXTSEL_SWSTART;
-    adc->CR2 |= (ADC_CR2_EXTSEL_SWSTART | ADC_CR2_EXTTRIG);     // Set 111 AND enable trigger routing
+    adc->CR2 &= ~ADC_CR2_EXTSEL_MASK;
+    adc->CR2 |= ((config->trigger << ADC_CR2_EXTSEL_SHIFT) | ADC_CR2_EXTTRIG);        // Set 111 AND enable trigger routing
 
     // 6. Set sample time for the channel
     if (config->channel <= ADC_CH9) {
@@ -51,99 +61,6 @@ void adc_init(volatile ADC_reg_t *adc, const ADC_config_t *config){
     if (config->continuous) {
         adc->CR2 |= ADC_CR2_CONT;
         adc->CR2 |= ADC_CR2_ADON;                               // second ADON writes triggers the actual start of conversion loop in continuous mode
-    }
-}
-
-void adc_scan_init(volatile ADC_reg_t *adc, const ADC_scan_config_t *config){
-
-    // 1. Set ADC clock prescaler (must be ≤ 14 MHz!)
-    RCC_CFGR &= ~(0x03 << RCC_CFGR_ADCPRE_SHIFT);                       // Clear ADCPRE bits
-    RCC_CFGR |= (config->prescaler << RCC_CFGR_ADCPRE_SHIFT);
-
-    // 2. Enable ADC clock
-    rcc_periph_clock_enable(adc == ADC1 ? RCC_ADC1 : RCC_ADC2);
-
-    // 3. Power on ADC (Wake up the peripheral from power-down mode) + small delay at least 3-4 microseconds
-    adc->CR2 |= ADC_CR2_ADON;
-    for (volatile uint32_t i = 0; i < 10000; i++);
-
-    // 4. Enable internal channels BEFORE calibration if any channel >= 16
-    for (uint8_t i = 0; i < config->num_channels; i++) {
-        if(config->channels[i] >= ADC_CH16) {
-            adc->CR2 |= ADC_CR2_TSVREFE;
-            for (volatile uint32_t d = 0; d < 100000; d++);             // CRITICAL: Long delay for internal channel wake-up!
-            break;
-        }
-    }
-
-    // 5. Calibrate ADC
-    adc->CR2 |= ADC_CR2_RSTCAL;                                 // Reset calibration 
-    while(adc->CR2 & ADC_CR2_RSTCAL);                           // Wait for reset calibration complete (hardware clears)
-    adc->CR2 |= ADC_CR2_CAL;
-    while(adc->CR2 & ADC_CR2_CAL);                              // Wait for calibration complete
-
-    // 5.5 Set the EXTSEL bit
-    adc->CR2 &= ~ADC_CR2_EXTSEL_SWSTART;
-    adc->CR2 |= (ADC_CR2_EXTSEL_SWSTART | ADC_CR2_EXTTRIG);     // Set 111 AND enable trigger routing
-
-    // 6. Set sample time for ALL channels
-    for (uint8_t i = 0; i < config->num_channels; i++) {
-        if (config->channels[i] <= ADC_CH9) {
-            // channels[i]s 0-9 use SMPR2
-            uint32_t shift = (config->channels[i]) * 3;
-            adc->SMPR2 &= ~(0x07 << shift);
-            adc->SMPR2 |= (config->sample_time << shift);
-        } else {
-            // channels[i]s 10-17 use SMPR1
-            uint32_t shift = (config->channels[i] - 10) * 3;
-            adc->SMPR1 &= ~(0x07 << shift);
-            adc->SMPR1 |= (config->sample_time << shift);
-        }
-    }
-
-    // 7. Configure scan sequence, SQR1: bits 23-20 = number of conversions (1-16)
-    uint8_t n = config->num_channels;
-    adc->SQR1 = ((n - 1) << ADC_SQR1_CONV_NUM_SHIFT);
-
-    // Clear all SQ bits first
-    adc->SQR1 &= ~0x000FFFFF;                                   // Clear SQ13-SQ16
-    adc->SQR2 = 0;                                              // Clear SQ7-SQ12
-    adc->SQR3 = 0;                                              // Clear SQ1-SQ6
-
-    // Fill in sequence
-    for (uint8_t i = 0; i < n; i++) {
-        uint8_t sq_num = i + 1;                                             // increment SQ, SQ1, SQ2, SQ3
-
-        if (sq_num <= 6) {                                                  // SQ1-SQ6 go in SQR3
-            adc->SQR3 |= (config->channels[i] << ((sq_num - 1) * 5));
-        } else if (sq_num <= 12) {                                          // SQ7-SQ12 go in SQR2
-            adc->SQR2 |= (config->channels[i] << ((sq_num - 7) * 5));
-        } else {                                                            // SQ13-SQ16 go in SQR1
-            adc->SQR1 |= (config->channels[i] << ((sq_num - 13) * 5));
-        }
-    }
-
-    // 8. Enable scan mode in CR1
-    adc->CR1 |= ADC_CR1_SCAN;
-
-    if (config->continuous) {                                                   // Set continuous mode if requested
-        adc->CR2 |= ADC_CR2_CONT;
-        adc->CR2 |= ADC_CR2_ADON;                                               // Second ADON to start conversion
-    }
-}
-
-void adc_scan_read(volatile ADC_reg_t *adc, uint16_t *buffer, uint8_t count) {
-    if(!(adc->CR2 & ADC_CR2_CONT)) {
-        // Wait for any ongoing conversion to finish
-        adc->CR2 |= ADC_CR2_SWSTART;                                    // Single scan: start and read each result
-        for (uint8_t i = 0; i < count; i++) {
-            while(!(adc->SR & ADC_SR_EOC));                             // Wait for completion
-            buffer[i] = (uint16_t) (adc->DR & 0xFFF);
-        }
-    } else {
-        // Continuous scan: DR only has the LAST channel!
-        // You need DMA for multi-channel continuous mode!
-        buffer[0] = (uint16_t) (adc->DR & 0xFFF);                   // Only last channel available!
     }
 }
 
@@ -185,8 +102,10 @@ void adc_scan_dma_init(volatile ADC_reg_t *adc, const ADC_scan_config_t *config,
     while (adc->CR2 & ADC_CR2_CAL);
 
     // 6. Set EXTSEL to SWSTART
-    adc->CR2 &= ~ADC_CR2_EXTSEL_SWSTART;
-    adc->CR2 |= (ADC_CR2_EXTSEL_SWSTART | ADC_CR2_EXTTRIG);     // Set 111 AND enable trigger routing
+    adc->CR2 &= ~ADC_CR2_EXTTRIG;                                           // Ensure exttrig bits is 0
+    adc->CR2 &= ~ADC_CR2_EXTSEL_MASK;
+    adc->CR2 |= ((config->trigger << ADC_CR2_EXTSEL_SHIFT) | ADC_CR2_EXTTRIG);       // Set 111 AND enable trigger routing
+    // 
 
     // 7. Set sample time for ALL channels
     for (uint8_t i = 0; i < config->num_channels; i++) {
@@ -243,8 +162,8 @@ void adc_scan_dma_init(volatile ADC_reg_t *adc, const ADC_scan_config_t *config,
     dma_enable(dma_channel);
     
     // 12. Set continuous mode and start
-    adc->CR2 |= ADC_CR2_CONT | ADC_CR2_DMA;
-    adc->CR2 |= ADC_CR2_ADON;
+    adc->CR2 |= ADC_CR2_CONT | ADC_CR2_DMA;            
+    //adc->CR2 |= ADC_CR2_ADON;                         // <--- Alternative method
 }
 
 void adc_start(volatile ADC_reg_t *adc){
@@ -278,6 +197,7 @@ const ADC_config_t ADC_CH0_TEST = {
     .sample_time = ADC_SMP_55_5_CYCLES,
     .prescaler = RCC_CFGR_ADCPRE_DIV4,
     .continuous = true,
+    .trigger = ADC_TRIG_SWSTART,
 };
 
 // Initialize ADC1: Internal voltage, continuous mode
@@ -286,6 +206,7 @@ const ADC_config_t ADC_CH16_VREFINT = {
     .sample_time = ADC_SMP_239_5_CYCLES,
     .prescaler = RCC_CFGR_ADCPRE_DIV4,
     .continuous = true,
+    .trigger = ADC_TRIG_SWSTART,
 };
 
 // Initialize ADC1: Channel 1, continuous mode
@@ -294,15 +215,7 @@ const ADC_config_t ADC_CH1_TEST = {
     .sample_time = ADC_SMP_55_5_CYCLES,
     .prescaler = RCC_CFGR_ADCPRE_DIV4,
     .continuous = false,
-};
-
-// Initialize ADC1: scan mode
-const ADC_scan_config_t ADC_SCAN_TEST = {
-    .channels = {ADC_CH1, ADC_CH16},            // CH1 : potentiometer, CH16 : internal temperature sensor
-    .num_channels = 2,
-    .sample_time = ADC_SMP_239_5_CYCLES,
-    .prescaler = RCC_CFGR_ADCPRE_DIV4,
-    .continuous = true,
+    .trigger = ADC_TRIG_SWSTART,
 };
 
 // DMA scan mode: 2 channels, continuous, for DMA
@@ -312,4 +225,5 @@ const ADC_scan_config_t ADC_DMA_SCAN_TEST = {
     .sample_time = ADC_SMP_239_5_CYCLES,
     .prescaler = RCC_CFGR_ADCPRE_DIV4,
     .continuous = true,                         // Continuous for DMA circular mode
+    .trigger = ADC_TRIG_SWSTART,
 };

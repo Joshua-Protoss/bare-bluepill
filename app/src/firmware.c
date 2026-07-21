@@ -84,10 +84,12 @@ int main(void) {
     systick_set_frequency(SYSTICK_FREQ, rcc_get_ahb_freq()); // 1ms tick, interrupt enabled by default
     uart_setup();
     adc_setup();
+    adc_start(ADC1);
 
     while(1){
         // DMA is constantly updating adc_dma_buffer in the background!
         // Just read the latest values whenever we want:
+        
         uint16_t ch1_raw = adc_dma_buffer[0];           // Potentiometer
         uint16_t ch16_raw = adc_dma_buffer[1];          // Temperature
         uint32_t ch1_mv = (ch1_raw * 3300) / 4096;
@@ -100,3 +102,4 @@ int main(void) {
     }
     return 0;
 }
+

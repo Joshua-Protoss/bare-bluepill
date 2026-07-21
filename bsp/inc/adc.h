@@ -60,18 +60,21 @@ typedef struct {
 #define ADC_CR2_TSVREFE                     BIT(23)     // Temperature Sensor Enable
 
 // External trigger sources for CR2_EXTSEL
-#define ADC_CR2_EXTSEL_MASK                (0x07 << 17)    // Clear EXTSEK bits
-#define ADC_CR2_EXTSEL_TIM1_CC1            (0x00 << 17)    // 000: Timer 1 CC1 event
-#define ADC_CR2_EXTSEL_TIM1_CC2            (0x01 << 17)    // 001: Timer 1 CC2 event
-#define ADC_CR2_EXTSEL_TIM1_CC3            (0x02 << 17)    // 010: Timer 1 CC3 event
-#define ADC_CR2_EXTSEL_TIM2_CC2            (0x03 << 17)    // 011: Timer 2 CC2 event
-#define ADC_CR2_EXTSEL_TIM3_TRGO           (0x04 << 17)    // 100: Timer 3 TRGO event
-#define ADC_CR2_EXTSEL_TIM4_CC4            (0x05 << 17)    // 101: Timer 4 CC4 event
-#define ADC_CR2_EXTSEL_TIM8_TRGO           (0x06 << 17)    // 110: EXTI line 11/TIM8_TRGO event not available in bluepill
-#define ADC_CR2_EXTSEL_SWSTART             (0x07 << 17)    // 111: SWSTART
+#define ADC_CR2_EXTSEL_MASK                (0x07 << 17)    // Clear EXTSEL bits
+#define ADC_CR2_EXTSEL_SHIFT               (17)
+#define ADC_SQR1_CONV_NUM_SHIFT            (20U)           // L[3:0]: Regular channel sequence length
 
-
-#define ADC_SQR1_CONV_NUM_SHIFT            (20U)            // L[3:0]: Regular channel sequence length
+// ===== Eternal Trigger Sources for CR2_EXTSEL =====
+typedef enum {
+    ADC_TRIG_TIM1_CC1 = 0x00,                         // 000: Timer 1 CC1 event
+    ADC_TRIG_TIM1_CC2 = 0x01,                         // 001: Timer 1 CC2 event
+    ADC_TRIG_TIM1_CC3 = 0x02,                         // 010: Timer 1 CC3 event
+    ADC_TRIG_TIM2_CC2 = 0x03,                         // 011: Timer 2 CC2 event
+    ADC_TRIG_TIM3_TRGO = 0x04,                        // 100: Timer 3 TRGO event
+    ADC_TRIG_TIM4_CC4 = 0x05,                         // 101: Timer 4 CC4 event
+    ADC_TRIG_TIM8_TRGO = 0x06,                        // 110: EXTI line 11/TIM8_TRGO event not available in bluepill
+    ADC_TRIG_SWSTART = 0x07,                          // 111: Software trigger (SWSTART)
+} ADC_trigger_t;
 
 // ===== SMPR Sample Times =====
 typedef enum {
@@ -113,6 +116,7 @@ typedef struct {
     ADC_sample_time_t sample_time;      // Sampling duration
     rcc_adc_div_t prescaler;            // ADC Prescaler
     bool continuous;                    // Continuous or single conversion
+    ADC_trigger_t trigger;              // Select the external event used to trigger the start of conversion of a regular group
 } ADC_config_t;
 
 // ADC Scan Mode Configuration
@@ -122,19 +126,17 @@ typedef struct {
     ADC_sample_time_t sample_time;      // Same sample time for all channels
     rcc_adc_div_t prescaler;            // ADC Prescaler
     bool continuous;                    // Continuous or single conversion
+    ADC_trigger_t trigger;              // Select the external event used to trigger the start of conversion of a regular group
 } ADC_scan_config_t;
 
 // Function Prototypes
 void adc_init(volatile ADC_reg_t *adc, const ADC_config_t *config);
 uint16_t adc_read(volatile ADC_reg_t *adc);
-void adc_scan_init(volatile ADC_reg_t *adc, const ADC_scan_config_t *config);
-void adc_scan_read(volatile ADC_reg_t *adc, uint16_t *buffer, uint8_t count);
 void adc_scan_dma_init(volatile ADC_reg_t *adc, const ADC_scan_config_t *config, volatile DMA_Channel_reg_t *dma_channel, uint16_t *buffer);
 void adc_scan_dma_start(volatile ADC_reg_t *adc);
 void adc_start(volatile ADC_reg_t *adc);
 void adc_stop(volatile ADC_reg_t *adc);
 int32_t convert_internal_temp(uint16_t adc_raw);
-
 
 extern const ADC_config_t ADC_CH0_TEST;
 extern const ADC_config_t ADC_CH16_VREFINT;
@@ -170,6 +172,14 @@ extern const ADC_scan_config_t ADC_DMA_SCAN_TEST;
     // uint32_t compute = (val * 3300) / 4096;
     // usart_printf(USART1, "ADC: %4lu mV (%4u raw) \r\n", compute, val);
 
-        // uint16_t raw = adc_read(ADC1);
-        // uint32_t mv = (raw * 3300) / 4096;
-        // usart_printf(USART1, "ADC: %4lu mV (%4u raw) \r\n", mv, raw);
+    // uint16_t raw = adc_read(ADC1);
+    // uint32_t mv = (raw * 3300) / 4096;
+    // usart_printf(USART1, "ADC: %4lu mV (%4u raw) \r\n", mv, raw);
+
+    // uint16_t ch1_raw = adc_dma_buffer[0];           // Potentiometer
+    // uint16_t ch16_raw = adc_dma_buffer[1];          // Temperature
+    // uint32_t ch1_mv = (ch1_raw * 3300) / 4096;
+    // int32_t temp = convert_internal_temp(ch16_raw);
+    // usart_printf(USART1, "CH1: %lu mv (%u) | Temp: %ld.%02ld C (%u)\r\n",
+    //             ch1_mv, ch1_raw, temp / 100, temp % 100, ch16_raw);
+    // systick_delay_ms(200);
