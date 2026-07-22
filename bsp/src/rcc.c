@@ -113,8 +113,8 @@ void rcc_clock_configure(const rcc_clock_config_t *config){
     }
     
     // === Set flash latency to match the new clock speed ===
-    FLASH_ACR |= FLASH_ACR_PRFTBE; // Enable Prefetch buffer
-    FLASH_ACR &= ~(0x07 << FLASH_ACR_LATENCY_SHIFT); // Clear any existing latency bits
+    FLASH_ACR |= FLASH_ACR_PRFTBE;                              // Enable Prefetch buffer
+    FLASH_ACR &= ~(0x07 << FLASH_ACR_LATENCY_SHIFT);            // Clear any existing latency bits
 
     if (new_sysclk_freq <= 24000000) {
         FLASH_ACR |= (FLASH_ACR_ZERO_WS << FLASH_ACR_LATENCY_SHIFT);
@@ -131,8 +131,8 @@ void rcc_clock_configure(const rcc_clock_config_t *config){
     RCC_CFGR |= (config->ahb_div << RCC_CFGR_HPRE_SHIFT) | (config->apb1_div << RCC_CFGR_PPRE1_SHIFT) | (config->apb2_div << RCC_CFGR_PPRE2_SHIFT);
     
     // === Switch system clock ===
-    RCC_CFGR &= ~(0x03 << RCC_CFGR_SW_SHIFT); // Clear system switch bits
-    RCC_CFGR |= (config->sysclk_source << RCC_CFGR_SW_SHIFT); // Select system clock : HSI, HSE, or PLL
+    RCC_CFGR &= ~(0x03 << RCC_CFGR_SW_SHIFT);                                       // Clear system switch bits
+    RCC_CFGR |= (config->sysclk_source << RCC_CFGR_SW_SHIFT);                       // Select system clock : HSI, HSE, or PLL
 
     // Wait for switch
     uint32_t sws_mask = (config->sysclk_source == RCC_SYSCLK_PLL) ? 0x08 : (config->sysclk_source << 2);
@@ -172,7 +172,7 @@ uint8_t apb_div_to_value(rcc_apb_div_t div){
         case RCC_APB_DIV_4: return 4;
         case RCC_APB_DIV_8: return 8;
         case RCC_APB_DIV_16: return 16;
-        default:            return 1;
+        default:             return 1;
     }
 }
 

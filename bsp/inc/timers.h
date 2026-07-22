@@ -74,17 +74,17 @@ typedef enum {
 #define TIM14                                   ((volatile TIM_reg_t *) TIM14_BASE)
 
 // ===== CR1 Bits =====         
-#define TIM_CR1_CEN                             BIT(0)      // Counter enable
-#define TIM_CR1_UDIS                            BIT(1)      // Update disable
-#define TIM_CR1_URS                             BIT(2)      // Update request source
-#define TIM_CR1_OPM                             BIT(3)      // One pulse mode
-#define TIM_CR1_DIR                             BIT(4)      // Direction (0=up, 1=down)
+#define TIM_CR1_CEN                             BIT(0)                              // Counter enable
+#define TIM_CR1_UDIS                            BIT(1)                              // Update disable
+#define TIM_CR1_URS                             BIT(2)                              // Update request source
+#define TIM_CR1_OPM                             BIT(3)                              // One pulse mode
+#define TIM_CR1_DIR                             BIT(4)                              // Direction (0=up, 1=down)
 #define TIM_CR1_CMS_MASK                        (0x03 << 5) 
-#define TIM_CR1_CMS_EDGE                        (0x00 << 5) // Edge-aligned
-#define TIM_CR1_CMS_CENTER1                     (0x01 << 5) // Center-aligned mode 1
-#define TIM_CR1_CMS_CENTER2                     (0x02 << 5) // Center-aligned mode 2
-#define TIM_CR1_CMS_CENTER3                     (0x03 << 5) // Center-aligned mode 3
-#define TIM_CR1_ARPE                            BIT(7)         // Auto-reload preload enable
+#define TIM_CR1_CMS_EDGE                        (0x00 << 5)                         // Edge-aligned
+#define TIM_CR1_CMS_CENTER1                     (0x01 << 5)                         // Center-aligned mode 1
+#define TIM_CR1_CMS_CENTER2                     (0x02 << 5)                         // Center-aligned mode 2
+#define TIM_CR1_CMS_CENTER3                     (0x03 << 5)                         // Center-aligned mode 3
+#define TIM_CR1_ARPE                            BIT(7)                              // Auto-reload preload enable
 #define TIM_CR1_CKD_MASK                        (0x03 << 8) 
 #define TIM_CR1_CKD_DIV1                        (0x00 << 8)
 #define TIM_CR1_CKD_DIV2                        (0x01 << 8) 
@@ -92,17 +92,17 @@ typedef enum {
 
 // ===== CCMR1 Bits =====
 #define TIM_CCMR1_CC1S_MASK                     (0x03 << 0)
-#define TIM_CCMR1_CC1S_OUTPUT                   (0x00 << 0)         // output
-#define TIM_CCMR1_CC1S_INPUT_TI1                (0x01 << 0)         // input
+#define TIM_CCMR1_CC1S_OUTPUT                   (0x00 << 0)                              // output
+#define TIM_CCMR1_CC1S_INPUT_TI1                (0x01 << 0)                              // input
 #define TIM_CCMR1_CC1S_INPUT_TI2                (0x02 << 0)
 #define TIM_CCMR1_CC1S_INPUT_TRC                (0x03 << 0)
-#define TIM_CCMR1_OC1FE                         BIT(2)              // Output compare 1 fast enable
-#define TIM_CCMR1_OC1PE                         BIT(3)              // Output compare 1 preload
+#define TIM_CCMR1_OC1FE                         BIT(2)                                   // Output compare 1 fast enable
+#define TIM_CCMR1_OC1PE                         BIT(3)                                   // Output compare 1 preload
 #define TIM_CCMR1_OC1M_MASK                     (0x07 << 4)
 
 // ===== CCER Bits =====
 #define TIM_CCER_CC1E                           BIT(0)
-#define TIM_CCER_CC1P                           BIT(1)          // determine wether active means HIGH or LOW
+#define TIM_CCER_CC1P                           BIT(1)                                      // determine wether active means HIGH or LOW
 #define TIM_CCER_CC1NE                          BIT(2)
 #define TIM_CCER_CC1NP                          BIT(3)
 #define TIM_CCER_CC2E                           BIT(4)
@@ -158,6 +158,9 @@ typedef enum {
 #define TIM_EGR_TG                              BIT(6)
 #define TIM_EGR_BG                              BIT(7)
 
+// ===== BDTR Bits =====
+#define TIM_BDTR_MOE                            BIT(15)
+
 // Timer channels
 typedef enum {
     TIM_CH1 = 0,
@@ -168,47 +171,48 @@ typedef enum {
 
 // PWM options
 typedef enum {
-    TIM_MODE_PWM_CONTINUOUS,   // Regular PWM (runs forever)
-    TIM_MODE_PWM_ONE_SHOT,     // One-pulse mode
+    TIM_MODE_CONTINUOUS,                                                // Regular PWM (runs forever)
+    TIM_MODE_ONE_PULSE,                                                 // One-pulse mode
 } tim_op_mode_t;
 
 typedef enum {
-    TIM_CKD_DIV1 = (0x00 << 8),   // tDTS = tCK_INT
-    TIM_CKD_DIV2 = (0x01 << 8),   // tDTS = 2 × tCK_INT
-    TIM_CKD_DIV4 = (0x02 << 8),   // tDTS = 4 × tCK_INT
+    TIM_CKD_DIV1 = (0x00 << 8),                                         // tDTS = tCK_INT
+    TIM_CKD_DIV2 = (0x01 << 8),                                         // tDTS = 2 × tCK_INT
+    TIM_CKD_DIV4 = (0x02 << 8),                                         // tDTS = 4 × tCK_INT
 } tim_ckd_t;
 
 typedef enum {
-    TIM_CMS_EDGE    = (0x00 << 5),  // Edge-aligned
-    TIM_CMS_CENTER1 = (0x01 << 5),  // Center-aligned (up-down, interrupt at count=0)
-    TIM_CMS_CENTER2 = (0x02 << 5),  // Center-aligned (interrupt at count=ARR)
-    TIM_CMS_CENTER3 = (0x03 << 5),  // Center-aligned (interrupt at count=0 and ARR)
+    TIM_CMS_EDGE    = (0x00 << 5),                                      // Edge-aligned
+    TIM_CMS_CENTER1 = (0x01 << 5),                                      // Center-aligned (up-down, interrupt at count=0)
+    TIM_CMS_CENTER2 = (0x02 << 5),                                      // Center-aligned (interrupt at count=ARR)
+    TIM_CMS_CENTER3 = (0x03 << 5),                                      // Center-aligned (interrupt at count=0 and ARR)
 } tim_cms_t;
 
 typedef enum {
-    TIM_DIR_UP   = (0 << 4),    // Up-counting
-    TIM_DIR_DOWN = (1 << 4),    // Down-counting
+    TIM_DIR_UP   = (0 << 4),                                             // Up-counting
+    TIM_DIR_DOWN = (1 << 4),                                             // Down-counting
 } tim_dir_t;
 
 // PWM configuration 
 typedef struct {
-    uint32_t frequency;         // Desired PWM frequency
-    uint8_t duty_cycle;         // Initial duty cycle (0-100)
-    tim_channel_t channel;      // Which channel to use
-    tim_oc_mode_t oc_mode;      // Output compare mode
+    uint32_t frequency;                                                  // Desired PWM frequency
+    uint8_t duty_cycle;                                                  // Initial duty cycle (0-100)
+    tim_channel_t channel;                                               // Which channel to use
+    tim_oc_mode_t oc_mode;                                               // Output compare mode
     tim_op_mode_t op_mode;
     tim_ckd_t clock_div;      
     tim_cms_t cms_mode;       
     tim_dir_t direction;
-} tim_pwm_config_t;
+} tim_config_t;
 
 // Function prototypes
-void tim_pwm_init(volatile TIM_reg_t *tim, const tim_pwm_config_t * config, uint32_t tim_clock_hz);
-void tim_pwm_set_duty(volatile TIM_reg_t *tim, tim_channel_t channel, uint8_t duty_percent);
+void tim_init(volatile TIM_reg_t *tim, const tim_config_t * config, uint32_t tim_clock_hz);
+void tim_set_duty_cycle(volatile TIM_reg_t *tim, tim_channel_t channel, uint8_t duty_percent);
 void tim_enable(volatile TIM_reg_t *tim);
 void tim_disable(volatile TIM_reg_t *tim);
 
-extern const tim_pwm_config_t PWM_CH1_1KHZ_50;
-extern const tim_pwm_config_t PWM_CH2_1KHZ_50;
+extern const tim_config_t PWM_CH1_1KHZ_50;
+extern const tim_config_t PWM_CH2_1KHZ_50;
+extern const tim_config_t TIM1_ADC_TRIG_1KHz;
 
 #endif // INC_TIMERS_H

@@ -105,7 +105,6 @@ void adc_scan_dma_init(volatile ADC_reg_t *adc, const ADC_scan_config_t *config,
     adc->CR2 &= ~ADC_CR2_EXTTRIG;                                           // Ensure exttrig bits is 0
     adc->CR2 &= ~ADC_CR2_EXTSEL_MASK;
     adc->CR2 |= ((config->trigger << ADC_CR2_EXTSEL_SHIFT) | ADC_CR2_EXTTRIG);       // Set 111 AND enable trigger routing
-    // 
 
     // 7. Set sample time for ALL channels
     for (uint8_t i = 0; i < config->num_channels; i++) {
@@ -161,8 +160,13 @@ void adc_scan_dma_init(volatile ADC_reg_t *adc, const ADC_scan_config_t *config,
     // 11. Enable DMA channel
     dma_enable(dma_channel);
     
-    // 12. Set continuous mode and start
-    adc->CR2 |= ADC_CR2_CONT | ADC_CR2_DMA;            
+    // 12. Set continuous mode and DMA
+    if (config->continuous == true) {
+        adc->CR2 |= ADC_CR2_CONT | ADC_CR2_DMA;   
+    } else {
+        adc->CR2 |= ADC_CR2_DMA;
+    }
+             
     //adc->CR2 |= ADC_CR2_ADON;                         // <--- Alternative method
 }
 
@@ -224,6 +228,16 @@ const ADC_scan_config_t ADC_DMA_SCAN_TEST = {
     .num_channels = 2,
     .sample_time = ADC_SMP_239_5_CYCLES,
     .prescaler = RCC_CFGR_ADCPRE_DIV4,
-    .continuous = true,                         // Continuous for DMA circular mode
+    .continuous = false,                         // Continuous for DMA circular mode
     .trigger = ADC_TRIG_SWSTART,
+};
+
+// ADC scan config with TIM1 trigger
+const ADC_scan_config_t ADC_TIMER_TRIG_SCAN = {
+    .channels = {ADC_CH1, ADC_CH16},
+    .num_channels = 2,
+    .sample_time = ADC_SMP_55_5_CYCLES,
+    .prescaler = RCC_CFGR_ADCPRE_DIV4,
+    .continuous = false,
+    .trigger = ADC_TRIG_TIM1_CC1,              
 };

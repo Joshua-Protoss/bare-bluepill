@@ -4,6 +4,7 @@
 #include "systick.h"
 #include <string.h>
 #include "usart.h"
+#include "timers.h"
 #include "adc.h"
 
 #define SYSTICK_FREQ                    (1000)            // the desired systick frequency, 1000Hz means 1ms per tick  
@@ -55,8 +56,12 @@ void adc_setup(){
     rcc_periph_clock_enable(RCC_GPIOA);
     gpio_set_mode(ADC_PORT, ADC_PIN, GPIO_MODE_INPUT, GPIO_CNF_INPUT_ANALOG);
 
+    // Configure Timer1 as output compare
+    rcc_periph_clock_enable(RCC_TIM1);
+    tim_init(TIM1, &TIM1_ADC_TRIG_1KHz, rcc_get_apb2_freq());               // 44MHz (APB2_DIV_1)
+    
     // Initialize ADC1: Channel 0, continuous mode
-    adc_scan_dma_init(ADC1, &ADC_DMA_SCAN_TEST, DMA1_Channel1, (uint16_t *)adc_dma_buffer);
+    adc_scan_dma_init(ADC1, &ADC_TIMER_TRIG_SCAN, DMA1_Channel1, (uint16_t *)adc_dma_buffer);
 
     volatile uint32_t apb2_after = RCC_APB2_ENR;
     volatile uint32_t cr1 = ADC1->CR1;
@@ -84,12 +89,9 @@ int main(void) {
     systick_set_frequency(SYSTICK_FREQ, rcc_get_ahb_freq()); // 1ms tick, interrupt enabled by default
     uart_setup();
     adc_setup();
-    adc_start(ADC1);
-
+    
     while(1){
-        // DMA is constantly updating adc_dma_buffer in the background!
-        // Just read the latest values whenever we want:
-        
+
         uint16_t ch1_raw = adc_dma_buffer[0];           // Potentiometer
         uint16_t ch16_raw = adc_dma_buffer[1];          // Temperature
         uint32_t ch1_mv = (ch1_raw * 3300) / 4096;

@@ -141,8 +141,8 @@ int32_t convert_internal_temp(uint16_t adc_raw);
 extern const ADC_config_t ADC_CH0_TEST;
 extern const ADC_config_t ADC_CH16_VREFINT;
 extern const ADC_config_t ADC_CH1_TEST;
-extern const ADC_scan_config_t ADC_SCAN_TEST;
 extern const ADC_scan_config_t ADC_DMA_SCAN_TEST;
+extern const ADC_scan_config_t ADC_TIMER_TRIG_SCAN;
 
 #endif //INC_ADC_H
 
