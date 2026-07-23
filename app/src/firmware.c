@@ -10,8 +10,11 @@
 #define SYSTICK_FREQ                    (1000)            // the desired systick frequency, 1000Hz means 1ms per tick  
 #define ADC_PORT                        (PORT_GPIOA)      // this is an external LED connected to PA0
 #define ADC_PIN                         (PIN_GPIO1)
+#define USART_TX_PIN                    (PIN_GPIO9)
+#define USART_RX_PIN                    (PIN_GPIO10)
 
 volatile uint32_t systick_ticks = 0;
+volatile uint32_t adc_sample_count = 0;
 
 // DMA buffer for 2 channels
 static uint16_t adc_dma_buffer[2];
@@ -29,6 +32,7 @@ void dma1_channel1_isr(void){
     if (DMA1_Controller->ISR & DMA_ISR_TCIF(1)) {
         DMA1_Controller->IFCR = DMA_IFCR_CTCIF(1);
         dma_transfer_complete = true;
+        adc_sample_count++;         // Count each scan
     }
 }
 
@@ -36,9 +40,9 @@ void uart_setup(){
     rcc_periph_clock_enable(RCC_GPIOA);
     rcc_periph_clock_enable(RCC_USART1);
     // PA9 = TX (AF push-pull)
-    gpio_set_mode(PORT_GPIOA, PIN_GPIO9, GPIO_MODE_OUTPUT_50MHZ, GPIO_CNF_OUTPUT_AF_PUSHPULL);
+    gpio_set_mode(PORT_GPIOA, USART_TX_PIN, GPIO_MODE_OUTPUT_50MHZ, GPIO_CNF_OUTPUT_AF_PUSHPULL);
     // PA10 = RX (floating input)
-    gpio_set_mode(PORT_GPIOA, PIN_GPIO10, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOATING);
+    gpio_set_mode(PORT_GPIOA, USART_RX_PIN, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOATING);
 
     // Configure USART1
     usart_init(USART1, 115200, &USART1_TX_RX_8BIT);    // the function will automatically compute the correct BRR for 44MHz
@@ -86,19 +90,30 @@ void adc_setup(){
 
 int main(void) {
     rcc_clock_configure(&RCC_CLOCK_HSE_44MHZ);
-    systick_set_frequency(SYSTICK_FREQ, rcc_get_ahb_freq()); // 1ms tick, interrupt enabled by default
+    systick_set_frequency(SYSTICK_FREQ, rcc_get_ahb_freq());        // 1ms tick, interrupt enabled by default
+    //rcc_periph_clock_enable(RCC_GPIOC);
+    //gpio_set_mode(PORT_GPIOC, PIN_GPIO13, GPIO_MODE_OUTPUT_50MHZ, GPIO_CNF_OUTPUT_PUSHPULL);
+    uint32_t last_count = 0;
     uart_setup();
     adc_setup();
+    uint32_t last_print = systick_ticks;
     
     while(1){
 
-        uint16_t ch1_raw = adc_dma_buffer[0];           // Potentiometer
-        uint16_t ch16_raw = adc_dma_buffer[1];          // Temperature
+        uint16_t ch1_raw = adc_dma_buffer[0];                       // Potentiometer
+        uint16_t ch16_raw = adc_dma_buffer[1];                      // Temperature
         uint32_t ch1_mv = (ch1_raw * 3300) / 4096;
         int32_t temp = convert_internal_temp(ch16_raw);
 
         usart_printf(USART1, "CH1: %lu mv (%u) | Temp: %ld.%02ld C (%u)\r\n",
                     ch1_mv, ch1_raw, temp / 100, temp % 100, ch16_raw);
+        
+        if (systick_ticks - last_print >= 1000) {       // Every 1 second
+            last_print = systick_ticks;
+            uint32_t samples_per_sec = adc_sample_count - last_count;
+            last_count = adc_sample_count;
+            usart_printf(USART1, "Sample rate: %lu Hz\r\n", samples_per_sec);
+        }
 
         systick_delay_ms(200);
     }
