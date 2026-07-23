@@ -40,7 +40,7 @@ void tim_init(volatile TIM_reg_t *tim, const tim_config_t *config, uint32_t tim_
 
     // pre-calculate prescaler and auto-reload
     if (!tim_calculate_prescaler_arr(calculation_clock, config->frequency, &psc, &arr)) {
-        return; // invalid frequency
+        return;                                                         // invalid frequency
     }
 
     // Disable counter before configuration
@@ -131,9 +131,9 @@ const tim_config_t PWM_CH1_1KHZ_50 = {
         .channel = TIM_CH1,
         .oc_mode = TIM_OC_MODE_PWM1,
         .op_mode = TIM_MODE_CONTINUOUS,
-        .clock_div = TIM_CKD_DIV1,    // Default
-        .cms_mode = TIM_CMS_EDGE,      // Default
-        .direction = TIM_DIR_UP,       // Default
+        .clock_div = TIM_CKD_DIV1,    
+        .cms_mode = TIM_CMS_EDGE,      
+        .direction = TIM_DIR_UP,      
 };
 
 // CH2: LED2 fading out (opposite phase)

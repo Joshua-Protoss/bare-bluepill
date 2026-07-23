@@ -32,8 +32,15 @@ void dma1_channel1_isr(void){
     if (DMA1_Controller->ISR & DMA_ISR_TCIF(1)) {
         DMA1_Controller->IFCR = DMA_IFCR_CTCIF(1);
         dma_transfer_complete = true;
-        adc_sample_count++;         // Count each scan
+    
+        // Toggle LED every 100 DMA transfers
+        static uint32_t toggle_count = 0;
+        if (++toggle_count >= 500) {
+            toggle_count = 0;
+            gpio_toggle_pin(PORT_GPIOC, PIN_GPIO13);
+        }
     }
+
 }
 
 void uart_setup(){
@@ -91,12 +98,10 @@ void adc_setup(){
 int main(void) {
     rcc_clock_configure(&RCC_CLOCK_HSE_44MHZ);
     systick_set_frequency(SYSTICK_FREQ, rcc_get_ahb_freq());        // 1ms tick, interrupt enabled by default
-    //rcc_periph_clock_enable(RCC_GPIOC);
-    //gpio_set_mode(PORT_GPIOC, PIN_GPIO13, GPIO_MODE_OUTPUT_50MHZ, GPIO_CNF_OUTPUT_PUSHPULL);
-    uint32_t last_count = 0;
+    rcc_periph_clock_enable(RCC_GPIOC);
+    gpio_set_mode(PORT_GPIOC, PIN_GPIO13, GPIO_MODE_OUTPUT_50MHZ, GPIO_CNF_OUTPUT_PUSHPULL);
     uart_setup();
     adc_setup();
-    uint32_t last_print = systick_ticks;
     
     while(1){
 
@@ -108,13 +113,6 @@ int main(void) {
         usart_printf(USART1, "CH1: %lu mv (%u) | Temp: %ld.%02ld C (%u)\r\n",
                     ch1_mv, ch1_raw, temp / 100, temp % 100, ch16_raw);
         
-        if (systick_ticks - last_print >= 1000) {       // Every 1 second
-            last_print = systick_ticks;
-            uint32_t samples_per_sec = adc_sample_count - last_count;
-            last_count = adc_sample_count;
-            usart_printf(USART1, "Sample rate: %lu Hz\r\n", samples_per_sec);
-        }
-
         systick_delay_ms(200);
     }
     return 0;
