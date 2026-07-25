@@ -178,6 +178,77 @@ void adc_stop(volatile ADC_reg_t *adc){
     adc->CR2 &= ~ADC_CR2_ADON;
 }
 
+void adc_injected_init(volatile ADC_reg_t *adc, const ADC_injected_config_t *config) {
+    // 1. Set ADC clock prescaler
+    RCC_CFGR &= ~(0x03 << RCC_CFGR_ADCPRE_SHIFT);
+    RCC_CFGR |= (config->prescaler << RCC_CFGR_ADCPRE_SHIFT);
+
+    // 2. Enable ADC clock
+    rcc_periph_clock_enable(adc == ADC1 ? RCC_ADC1 : RCC_ADC2);
+    
+    // 3. Power on ADC
+    adc->CR2 |= ADC_CR2_ADON;
+    for (volatile uint32_t i = 0; i < 10000; i++);
+
+    // 4. Enable internal channels if any channel >= 16
+    for (uint8_t i = 0; i < config->num_channels; i++) {
+        if (config->channels[i] >= ADC_CH16) {
+            adc->CR2 |= ADC_CR2_TSVREFE;
+            for (volatile uint32_t d = 0; d < 100000; d++);
+            break;
+        }
+    }
+
+    // 5. Calibrate
+    adc->CR2 |= ADC_CR2_RSTCAL;
+    while(adc->CR2 & ADC_CR2_RSTCAL);
+    adc->CR2 |= ADC_CR2_CAL;
+    while(adc->CR2 & ADC_CR2_CAL);
+
+    // 6. Set sample time for ALL injected channels
+    for (uint8_t i = 0; i < config->num_channels; i++) {
+        if (config->channels[i] <= ADC_CH9) {
+            uint32_t shift = config->channels[i] * 3;
+            adc->SMPR2 &= ~(0x07 << shift);
+            adc->SMPR2 |= (config->sample_time << shift);
+        } else {
+            uint32_t shift = (config->channels[i] - 10) * 3;
+            adc->SMPR1 &= ~(0x07 << shift);
+            adc->SMPR1 |= (config->sample_time << shift);
+        }
+    }
+
+    // 7. Configure injected sequence
+    uint8_t n = config->num_channels;
+    adc->JSQR = ((n-1) << ADC_JSQR_JL_SHIFT);                       // Number of injections (1-4)
+
+    for (uint8_t i = 0; i < n; i++) {                               // Fill in sequence: JSQR holds 4 channels max
+        // JSQR format: bits[19:15]=JSQ4, [14:10]=JSQ3, [9:5]=JSQ2, [4:0]=JSQ1
+        adc->JSQR |= (config->channels[i] << ((n - 1 - i) * 5));
+    }
+
+    // 8. Set injected trigger source
+    adc->CR2 &= ~(ADC_CR2_JEXTSEL_MASK);
+    adc->CR2 |= (config->trigger << ADC_CR2_JEXTSEL_SHIFT);
+    adc->CR2 |= ADC_CR2_JEXTTRIG;                                   // Enable injected external trigger
+
+    // 9. Set auto-inject if requested
+    if (config->auto_inject) {
+        adc->CR1 |= BIT(10);                                        // JAUTO: Auto-inject after regular group
+    }
+
+    // 10. Second ADON to start conversion (optional)
+    // adc->CR2 |= ADC_CR2_ADON;
+}
+
+void adc_injected_read(volatile ADC_reg_t *adc, uint16_t *buffer, uint8_t count) {
+    // Injected results are in JDR1-JDR4
+    if (count >= 1) buffer[0] = (uint16_t)(adc->JDR1 & 0xFFF);
+    if (count >= 2) buffer[1] = (uint16_t)(adc->JDR2 & 0xFFF);
+    if (count >= 3) buffer[2] = (uint16_t)(adc->JDR3 & 0xFFF);
+    if (count >= 4) buffer[3] = (uint16_t)(adc->JDR4 & 0xFFF);
+}
+
 int32_t convert_internal_temp(uint16_t adc_raw){
     // Vdda = 3300 mV, 12-bit ADC = 4095
     // V_sense (mV) = (adc_raw * 3300) / 4095
@@ -240,4 +311,14 @@ const ADC_scan_config_t ADC_TIMER_TRIG_SCAN = {
     .prescaler = RCC_CFGR_ADCPRE_DIV4,
     .continuous = false,
     .trigger = ADC_TRIG_TIM1_CC1,              
+};
+
+// Injected mode test: 2 channels, TIM1_CC1 trigger
+const ADC_injected_config_t ADC_INJECT_TEST = {
+    .channels = {ADC_CH11, ADC_CH16},
+    .num_channels = 2,
+    .sample_time = ADC_SMP_55_5_CYCLES,
+    .prescaler = RCC_CFGR_ADCPRE_DIV4,
+    .trigger = ADC_TRIG_TIM4_CC4,
+    .auto_inject = false,
 };

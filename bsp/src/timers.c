@@ -64,7 +64,7 @@ void tim_init(volatile TIM_reg_t *tim, const tim_config_t *config, uint32_t tim_
         case TIM_CH1:
             tim->CCMR1 &= ~TIM_CCMR1_OC1M_MASK;
             tim->CCMR1 |= config->oc_mode | TIM_CCMR1_OC1PE;
-            tim->CCER |= TIM_CCER_CC1E;
+            tim->CCER |= TIM_CCER_CC1E; 
             break;
         case TIM_CH2:
             tim->CCMR1 &= ~(TIM_CCMR1_OC1M_MASK << 8);                  // OC2 bits are +8 from OC1
@@ -143,16 +143,16 @@ const tim_config_t PWM_CH2_1KHZ_50 = {
         .channel = TIM_CH2,          // ← Channel 2!
         .oc_mode = TIM_OC_MODE_PWM1,
         .op_mode = TIM_MODE_CONTINUOUS,
-        .clock_div = TIM_CKD_DIV1,    // Default
-        .cms_mode = TIM_CMS_EDGE,      // Default
-        .direction = TIM_DIR_UP,       // Default
+        .clock_div = TIM_CKD_DIV1,    
+        .cms_mode = TIM_CMS_EDGE,      
+        .direction = TIM_DIR_UP,       
 };
 
 // ADC Trigger
 const tim_config_t TIM1_ADC_TRIG_1KHz = {
-    .frequency = 1000,                          // 1kHz ADC sampling rate
-    .duty_cycle = 50,                           // Trigger at 50% of period
-    .channel = TIM_CH1,                         // CC1 → ADC EXTSEL
+    .frequency = 1000,                                          // 1kHz ADC sampling rate
+    .duty_cycle = 50,                                           // Trigger at 50% of period
+    .channel = TIM_CH1,                                         // CC1 → ADC EXTSEL
     .oc_mode = TIM_OC_MODE_PWM1,
     .op_mode = TIM_MODE_CONTINUOUS,
     .clock_div = TIM_CKD_DIV1,

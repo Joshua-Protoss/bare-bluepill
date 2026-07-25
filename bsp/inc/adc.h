@@ -55,16 +55,21 @@ typedef struct {
 #define ADC_CR2_RSTCAL                      BIT(3)      // Reset calibration
 #define ADC_CR2_DMA                         BIT(8)      // DMA Enable
 #define ADC_CR2_ALIGN                       BIT(11)     // Data Alignment (0=right, 1=left)
+#define ADC_CR2_JEXTTRIG                    BIT(15)     // Injected external trigger enable
 #define ADC_CR2_EXTTRIG                     BIT(20)     // External trigger conversion mode for regular channels
+#define ADC_CR2_JSWSTART                    BIT(21)     // Start injected conversion (software)
 #define ADC_CR2_SWSTART                     BIT(22)     // Start Conversion (software)
 #define ADC_CR2_TSVREFE                     BIT(23)     // Temperature Sensor Enable
 
 // External trigger sources for CR2_EXTSEL
 #define ADC_CR2_EXTSEL_MASK                (0x07 << 17)    // Clear EXTSEL bits
+#define ADC_CR2_JEXTSEL_MASK               (0x07 << 12)
 #define ADC_CR2_EXTSEL_SHIFT               (17)
+#define ADC_CR2_JEXTSEL_SHIFT              (12)
 #define ADC_SQR1_CONV_NUM_SHIFT            (20U)           // L[3:0]: Regular channel sequence length
+#define ADC_JSQR_JL_SHIFT                  (20U)           // Injected sequence length
 
-// ===== Eternal Trigger Sources for CR2_EXTSEL =====
+// ===== External Trigger Sources for CR2_EXTSEL=====
 typedef enum {
     ADC_TRIG_TIM1_CC1 = 0x00,                         // 000: Timer 1 CC1 event
     ADC_TRIG_TIM1_CC2 = 0x01,                         // 001: Timer 1 CC2 event
@@ -129,6 +134,16 @@ typedef struct {
     ADC_trigger_t trigger;              // Select the external event used to trigger the start of conversion of a regular group
 } ADC_scan_config_t;
 
+// Injected mode configuration
+typedef struct {
+    uint8_t num_channels;               
+    ADC_channel_t channels[4];          // Up to 4 injected channels
+    ADC_sample_time_t sample_time;
+    rcc_adc_div_t prescaler;
+    ADC_trigger_t trigger;              // e.g., ADC_TRIG_TIM1_CC4
+    bool auto_inject;                   // Auto-inject after regular?
+} ADC_injected_config_t;
+
 // Function Prototypes
 void adc_init(volatile ADC_reg_t *adc, const ADC_config_t *config);
 uint16_t adc_read(volatile ADC_reg_t *adc);
@@ -136,6 +151,9 @@ void adc_scan_dma_init(volatile ADC_reg_t *adc, const ADC_scan_config_t *config,
 void adc_scan_dma_start(volatile ADC_reg_t *adc);
 void adc_start(volatile ADC_reg_t *adc);
 void adc_stop(volatile ADC_reg_t *adc);
+void adc_injected_init(volatile ADC_reg_t *adc, const ADC_injected_config_t *config);
+void adc_injected_start(volatile ADC_reg_t *adc, uint16_t *buffer, uint8_t count);
+void adc_injected_stop(volatile ADC_reg_t *adc);
 int32_t convert_internal_temp(uint16_t adc_raw);
 
 extern const ADC_config_t ADC_CH0_TEST;
