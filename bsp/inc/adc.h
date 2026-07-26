@@ -69,7 +69,7 @@ typedef struct {
 #define ADC_SQR1_CONV_NUM_SHIFT            (20U)           // L[3:0]: Regular channel sequence length
 #define ADC_JSQR_JL_SHIFT                  (20U)           // Injected sequence length
 
-// ===== External Trigger Sources for CR2_EXTSEL=====
+// ===== External Trigger Sources for CR2_EXTSEL regular & injected channel=====
 typedef enum {
     ADC_TRIG_TIM1_CC1 = 0x00,                         // 000: Timer 1 CC1 event
     ADC_TRIG_TIM1_CC2 = 0x01,                         // 001: Timer 1 CC2 event
@@ -80,6 +80,16 @@ typedef enum {
     ADC_TRIG_TIM8_TRGO = 0x06,                        // 110: EXTI line 11/TIM8_TRGO event not available in bluepill
     ADC_TRIG_SWSTART = 0x07,                          // 111: Software trigger (SWSTART)
 } ADC_trigger_t;
+
+typedef enum {
+    ADC_JTRIG_TIM1_TRGO  = 0x00,    // 000: TIM1_TRGO
+    ADC_JTRIG_TIM1_CC4   = 0x01,    // 001: TIM1_CC4
+    ADC_JTRIG_TIM2_TRGO  = 0x02,    // 010: TIM2_TRGO
+    ADC_JTRIG_TIM2_CC1   = 0x03,    // 011: TIM2_CC1
+    ADC_JTRIG_TIM3_CC4   = 0x04,    // 100: TIM3_CC4
+    ADC_JTRIG_TIM4_TRGO  = 0x05,    // 101: TIM4_TRGO
+    ADC_JTRIG_JSWSTART   = 0x07,    // 111: JSWSTART
+} ADC_jtrigger_t;
 
 // ===== SMPR Sample Times =====
 typedef enum {
@@ -140,7 +150,7 @@ typedef struct {
     ADC_channel_t channels[4];          // Up to 4 injected channels
     ADC_sample_time_t sample_time;
     rcc_adc_div_t prescaler;
-    ADC_trigger_t trigger;              // e.g., ADC_TRIG_TIM1_CC4
+    ADC_jtrigger_t trigger;              // e.g., ADC_TRIG_TIM1_CC4
     bool auto_inject;                   // Auto-inject after regular?
 } ADC_injected_config_t;
 
@@ -154,6 +164,7 @@ void adc_stop(volatile ADC_reg_t *adc);
 void adc_injected_init(volatile ADC_reg_t *adc, const ADC_injected_config_t *config);
 void adc_injected_start(volatile ADC_reg_t *adc, uint16_t *buffer, uint8_t count);
 void adc_injected_stop(volatile ADC_reg_t *adc);
+void adc_injected_read(volatile ADC_reg_t *adc, uint16_t *buffer, uint8_t count);
 int32_t convert_internal_temp(uint16_t adc_raw);
 
 extern const ADC_config_t ADC_CH0_TEST;
@@ -161,43 +172,6 @@ extern const ADC_config_t ADC_CH16_VREFINT;
 extern const ADC_config_t ADC_CH1_TEST;
 extern const ADC_scan_config_t ADC_DMA_SCAN_TEST;
 extern const ADC_scan_config_t ADC_TIMER_TRIG_SCAN;
+extern const ADC_injected_config_t ADC_INJECT_TEST;
 
 #endif //INC_ADC_H
-
-        // uint16_t raw = adc_read(ADC1);
-        // uint32_t mv = (raw * 3300) / 4096;
-        // usart_printf(USART1, "ADC: %4lu mV (%4u raw) \r\n", mv, raw);
-
-    // adc_start(ADC1);
-
-    // while(!(ADC1->SR & ADC_SR_EOC));
-    // uint16_t val = ADC1->DR;
-    // val = (val * 3300) / 4096;
-    // usart_printf(USART1, "First reading: %lu mv\r\n", val);
-
-        // uint16_t results[2];
-        // adc_scan_read(ADC1, results, 2);
-
-        // usart_printf(USART1, "CH1: %lu mV | Temp: %ld.%02ld C | Raw Temp: %lu\r\n",
-        //     (results[0] * 3300) / 4096,
-        //     convert_internal_temp(results[1]) / 100,
-        //     convert_internal_temp(results[1]) % 100,
-        //     results[1]);
-
-
-    // while(!(ADC1->SR & ADC_SR_EOC));
-    // uint16_t val = ADC1->DR;
-    // uint32_t compute = (val * 3300) / 4096;
-    // usart_printf(USART1, "ADC: %4lu mV (%4u raw) \r\n", compute, val);
-
-    // uint16_t raw = adc_read(ADC1);
-    // uint32_t mv = (raw * 3300) / 4096;
-    // usart_printf(USART1, "ADC: %4lu mV (%4u raw) \r\n", mv, raw);
-
-    // uint16_t ch1_raw = adc_dma_buffer[0];           // Potentiometer
-    // uint16_t ch16_raw = adc_dma_buffer[1];          // Temperature
-    // uint32_t ch1_mv = (ch1_raw * 3300) / 4096;
-    // int32_t temp = convert_internal_temp(ch16_raw);
-    // usart_printf(USART1, "CH1: %lu mv (%u) | Temp: %ld.%02ld C (%u)\r\n",
-    //             ch1_mv, ch1_raw, temp / 100, temp % 100, ch16_raw);
-    // systick_delay_ms(200);

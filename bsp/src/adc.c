@@ -220,29 +220,39 @@ void adc_injected_init(volatile ADC_reg_t *adc, const ADC_injected_config_t *con
 
     // 7. Configure injected sequence
     uint8_t n = config->num_channels;
-    adc->JSQR = ((n-1) << ADC_JSQR_JL_SHIFT);                       // Number of injections (1-4)
+    if (n > 4) n = 4;                                               // Hardware limit safety check
+    uint32_t jsqr_val = ((n-1) << ADC_JSQR_JL_SHIFT);               // Number of injections (1-4)
 
     for (uint8_t i = 0; i < n; i++) {                               // Fill in sequence: JSQR holds 4 channels max
         // JSQR format: bits[19:15]=JSQ4, [14:10]=JSQ3, [9:5]=JSQ2, [4:0]=JSQ1
-        adc->JSQR |= (config->channels[i] << ((n - 1 - i) * 5));
+        uint32_t shift = (3 - n + 1 + i) * 5;
+        jsqr_val |= (((uint32_t)config->channels[i] & 0x1F) << shift);
     }
+    adc->JSQR = 0;
+    adc->JSQR = jsqr_val;                                           // Single atomic write to JSQR
 
     // 8. Set injected trigger source
+    adc->CR2 &= ~(ADC_CR2_JEXTTRIG);
     adc->CR2 &= ~(ADC_CR2_JEXTSEL_MASK);
-    adc->CR2 |= (config->trigger << ADC_CR2_JEXTSEL_SHIFT);
-    adc->CR2 |= ADC_CR2_JEXTTRIG;                                   // Enable injected external trigger
+    adc->CR2 |= ((config->trigger << ADC_CR2_JEXTSEL_SHIFT) | ADC_CR2_JEXTTRIG);
 
     // 9. Set auto-inject if requested
-    if (config->auto_inject) {
-        adc->CR1 |= BIT(10);                                        // JAUTO: Auto-inject after regular group
+    if (config->auto_inject) {                                   // you cannot use JAUTO and external triggers (JEXTTRIG) at the same time
+        adc->CR1 |= BIT(10);                                     // JAUTO: Auto-inject after regular group
     }
 
-    // 10. Second ADON to start conversion (optional)
-    // adc->CR2 |= ADC_CR2_ADON;
+    if (config->num_channels > 1) {
+        adc->CR1 |= ADC_CR1_SCAN;
+    }
+    
 }
 
 void adc_injected_read(volatile ADC_reg_t *adc, uint16_t *buffer, uint8_t count) {
+    adc->CR2 |= ADC_CR2_JSWSTART;
+    while (!(adc->SR & ADC_SR_JEOC));  
     // Injected results are in JDR1-JDR4
+    // buffer[0] = (uint16_t)(adc->JDR1 & 0xFFF);
+    // buffer[1] = (uint16_t)(adc->JDR2 & 0xFFF);
     if (count >= 1) buffer[0] = (uint16_t)(adc->JDR1 & 0xFFF);
     if (count >= 2) buffer[1] = (uint16_t)(adc->JDR2 & 0xFFF);
     if (count >= 3) buffer[2] = (uint16_t)(adc->JDR3 & 0xFFF);
@@ -315,10 +325,10 @@ const ADC_scan_config_t ADC_TIMER_TRIG_SCAN = {
 
 // Injected mode test: 2 channels, TIM1_CC1 trigger
 const ADC_injected_config_t ADC_INJECT_TEST = {
-    .channels = {ADC_CH11, ADC_CH16},
+    .channels = {ADC_CH1, ADC_CH16},
     .num_channels = 2,
     .sample_time = ADC_SMP_55_5_CYCLES,
     .prescaler = RCC_CFGR_ADCPRE_DIV4,
-    .trigger = ADC_TRIG_TIM4_CC4,
+    .trigger = ADC_JTRIG_JSWSTART,
     .auto_inject = false,
 };

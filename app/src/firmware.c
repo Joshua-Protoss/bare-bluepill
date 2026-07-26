@@ -17,7 +17,6 @@ volatile uint32_t systick_ticks = 0;
 volatile uint32_t adc_sample_count = 0;
 
 // DMA buffer for 2 channels
-static uint16_t adc_dma_buffer[2];
 static volatile bool dma_transfer_complete = false;
 
 // Pre-defined messages as uint8_t arrays
@@ -68,13 +67,14 @@ void adc_setup(){
     gpio_set_mode(ADC_PORT, ADC_PIN, GPIO_MODE_INPUT, GPIO_CNF_INPUT_ANALOG);
 
     // Configure Timer1 as output compare
-    rcc_periph_clock_enable(RCC_TIM1);
-    tim_init(TIM1, &TIM1_ADC_TRIG_1KHz, rcc_get_apb2_freq());               // 44MHz (APB2_DIV_1)
+    //rcc_periph_clock_enable(RCC_TIM1);
+    //tim_init(TIM1, &TIM1_ADC_TRIG_1KHz, rcc_get_apb2_freq());               // 44MHz (APB2_DIV_1)
     
-    // Initialize ADC1: Channel 0, continuous mode
-    adc_scan_dma_init(ADC1, &ADC_TIMER_TRIG_SCAN, DMA1_Channel1, (uint16_t *)adc_dma_buffer);
+    adc_injected_init(ADC1, &ADC_INJECT_TEST);
 
-    volatile uint32_t apb2_after = RCC_APB2_ENR;
+    volatile uint32_t jsqr = ADC1->JSQR;
+    volatile uint32_t channel_seq = ADC_INJECT_TEST.channels[0];
+    volatile uint32_t channel_seq2 = ADC_INJECT_TEST.channels[1];
     volatile uint32_t cr1 = ADC1->CR1;
     volatile uint32_t cr2 = ADC1->CR2;
     volatile uint32_t sr  = ADC1->SR;
@@ -82,6 +82,9 @@ void adc_setup(){
     volatile uint32_t cfgr = RCC_CFGR;
     volatile uint32_t smpr2 = ADC1->SMPR2;
     volatile uint32_t smpr1 = ADC1->SMPR1;
+    usart_printf(USART1, "JSQR: 0x%08lX\r\n", jsqr);
+    usart_printf(USART1, "channel_seq: %d\r\n", channel_seq);
+    usart_printf(USART1, "channel_seq2: %d\r\n", channel_seq2);
     usart_printf(USART1, "CR1: 0x%08lX\r\n", cr1);
     usart_printf(USART1, "CR2: 0x%08lX\r\n", cr2);
     usart_printf(USART1, "SR:  0x%08lX\r\n", sr);
@@ -89,7 +92,6 @@ void adc_setup(){
     usart_printf(USART1, "RCC_CFGR: 0x%08lX\r\n", cfgr);
     usart_printf(USART1, "SMPR2: 0x%08lX\r\n", smpr2);
     usart_printf(USART1, "SMPR1: 0x%08lX\r\n", smpr1);
-    usart_printf(USART1, "APB2: 0x%08lX\r\n", apb2_after);
 
     volatile uint32_t crl = PORT_GPIOA->CRL;
     usart_printf(USART1, "GPIOA_CRL: 0x%08lX\r\n", crl);
@@ -104,9 +106,10 @@ int main(void) {
     adc_setup();
     
     while(1){
-
-        uint16_t ch1_raw = adc_dma_buffer[0];                       // Potentiometer
-        uint16_t ch16_raw = adc_dma_buffer[1];                      // Temperature
+        uint16_t inj_results[2];
+        adc_injected_read(ADC1, inj_results, 2);
+        uint16_t ch1_raw = inj_results[0];                       // Potentiometer
+        uint16_t ch16_raw = inj_results[1];                      // Temperature
         uint32_t ch1_mv = (ch1_raw * 3300) / 4096;
         int32_t temp = convert_internal_temp(ch16_raw);
 
