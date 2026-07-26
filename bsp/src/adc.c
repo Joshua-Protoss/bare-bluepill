@@ -248,7 +248,7 @@ void adc_injected_init(volatile ADC_reg_t *adc, const ADC_injected_config_t *con
 }
 
 void adc_injected_read(volatile ADC_reg_t *adc, uint16_t *buffer, uint8_t count) {
-    adc->CR2 |= ADC_CR2_JSWSTART;
+    
     while (!(adc->SR & ADC_SR_JEOC));  
     // Injected results are in JDR1-JDR4
     // buffer[0] = (uint16_t)(adc->JDR1 & 0xFFF);
@@ -257,6 +257,10 @@ void adc_injected_read(volatile ADC_reg_t *adc, uint16_t *buffer, uint8_t count)
     if (count >= 2) buffer[1] = (uint16_t)(adc->JDR2 & 0xFFF);
     if (count >= 3) buffer[2] = (uint16_t)(adc->JDR3 & 0xFFF);
     if (count >= 4) buffer[3] = (uint16_t)(adc->JDR4 & 0xFFF);
+}
+
+void adc_injected_start(volatile ADC_reg_t *adc) {
+    adc->CR2 |= ADC_CR2_JSWSTART;
 }
 
 int32_t convert_internal_temp(uint16_t adc_raw){
@@ -329,6 +333,6 @@ const ADC_injected_config_t ADC_INJECT_TEST = {
     .num_channels = 2,
     .sample_time = ADC_SMP_55_5_CYCLES,
     .prescaler = RCC_CFGR_ADCPRE_DIV4,
-    .trigger = ADC_JTRIG_JSWSTART,
+    .trigger = ADC_JTRIG_TIM1_TRGO,
     .auto_inject = false,
 };

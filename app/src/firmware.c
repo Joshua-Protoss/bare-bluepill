@@ -67,8 +67,12 @@ void adc_setup(){
     gpio_set_mode(ADC_PORT, ADC_PIN, GPIO_MODE_INPUT, GPIO_CNF_INPUT_ANALOG);
 
     // Configure Timer1 as output compare
-    //rcc_periph_clock_enable(RCC_TIM1);
-    //tim_init(TIM1, &TIM1_ADC_TRIG_1KHz, rcc_get_apb2_freq());               // 44MHz (APB2_DIV_1)
+    rcc_periph_clock_enable(RCC_TIM1);
+    tim_init(TIM1, &TIM1_ADC_TRIG_1KHz, rcc_get_apb2_freq());               // 44MHz (APB2_DIV_1)
+
+    // Route CC1 event to TRGO for ADC trigger:
+    TIM1->CR2 &= ~(0x7 << 4);    // Clear MMS bits
+    TIM1->CR2 |= (0x3 << 4);     // MMS = 011: Compare Pulse - CC1IF
     
     adc_injected_init(ADC1, &ADC_INJECT_TEST);
 

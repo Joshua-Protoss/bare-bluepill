@@ -162,8 +162,7 @@ void adc_scan_dma_start(volatile ADC_reg_t *adc);
 void adc_start(volatile ADC_reg_t *adc);
 void adc_stop(volatile ADC_reg_t *adc);
 void adc_injected_init(volatile ADC_reg_t *adc, const ADC_injected_config_t *config);
-void adc_injected_start(volatile ADC_reg_t *adc, uint16_t *buffer, uint8_t count);
-void adc_injected_stop(volatile ADC_reg_t *adc);
+void adc_injected_start(volatile ADC_reg_t *adc);
 void adc_injected_read(volatile ADC_reg_t *adc, uint16_t *buffer, uint8_t count);
 int32_t convert_internal_temp(uint16_t adc_raw);
 
