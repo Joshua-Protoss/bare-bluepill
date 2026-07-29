@@ -94,6 +94,12 @@ void tim_init(volatile TIM_reg_t *tim, const tim_config_t *config, uint32_t tim_
     // Generate update to load prescaler and ARR
     tim->EGR |= TIM_EGR_UG;
 
+    // Configure TRGO if explicitly requested 
+    if (config->trgo != TIM_TRGO_NONE) {
+        tim->CR2 &= ~(0x7 << 4);
+        tim->CR2 |= (config->trgo << 4);
+    }
+
     // Enable output compare for advanced timer TIM1/TIM8
     if (tim == TIM1 || tim == TIM8){
         tim->BDTR |= TIM_BDTR_MOE;
@@ -158,4 +164,5 @@ const tim_config_t TIM1_ADC_TRIG_1KHz = {
     .clock_div = TIM_CKD_DIV1,
     .cms_mode = TIM_CMS_EDGE,
     .direction = TIM_DIR_UP,
+    .trgo = TIM_TRGO_CC1,
 };

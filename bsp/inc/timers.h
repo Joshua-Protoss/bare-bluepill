@@ -193,6 +193,18 @@ typedef enum {
     TIM_DIR_DOWN = (1 << 4),                                             // Down-counting
 } tim_dir_t;
 
+typedef enum {
+    TIM_TRGO_NONE   = 0xFF,                                               // Don't configure TRGO (keep default)
+    TIM_TRGO_RESET  = 0x00,                                               // UG bit from EGR
+    TIM_TRGO_ENABLE = 0x01,                                               // Counter enable
+    TIM_TRGO_UPDATE = 0x02,                                               // Update event
+    TIM_TRGO_CC1    = 0x03,                                               // CC1 compare pulse
+    TIM_TRGO_OC1REF = 0x04,                                               // OC1REF signal
+    TIM_TRGO_OC2REF = 0x05,                                               // OC2REF signal
+    TIM_TRGO_OC3REF = 0x06,                                               // OC3REF signal
+    TIM_TRGO_CC4REF = 0x07,                                               // OC4REF signal
+} tim_trgo_t;
+
 // PWM configuration 
 typedef struct {
     uint32_t frequency;                                                  // Desired PWM frequency
@@ -203,6 +215,7 @@ typedef struct {
     tim_ckd_t clock_div;      
     tim_cms_t cms_mode;       
     tim_dir_t direction;
+    tim_trgo_t trgo;
 } tim_config_t;
 
 // Function prototypes
