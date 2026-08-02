@@ -6,7 +6,9 @@
 #include "usart.h"
 #include "timers.h"
 #include "adc.h"
+#include "watchdog.h"
 
+#define ENABLE_WATCHDOG                 1
 #define SYSTICK_FREQ                    (1000)            // the desired systick frequency, 1000Hz means 1ms per tick  
 #define ADC_PORT                        (PORT_GPIOA)      // this is an external LED connected to PA0
 #define ADC_PIN                         (PIN_GPIO1)
@@ -104,8 +106,18 @@ int main(void) {
     gpio_set_mode(PORT_GPIOC, PIN_GPIO13, GPIO_MODE_OUTPUT_50MHZ, GPIO_CNF_OUTPUT_PUSHPULL);
     uart_setup();
     adc_setup();
-    
+
+    #if ENABLE_WATCHDOG 
+        iwdg_init(IWDG_PR_DIV32, 125);
+        iwdg_freeze_in_debug();  
+    #endif
+
     while(1){
+
+        #if ENABLE_WATCHDOG
+            iwdg_kick();
+        #endif
+
         uint16_t inj_results[2];
         adc_injected_read(ADC1, inj_results, 2);
         uint16_t ch1_raw = inj_results[0];                       // Potentiometer
@@ -115,8 +127,9 @@ int main(void) {
 
         usart_printf(USART1, "CH1: %lu mv (%u) | Temp: %ld.%02ld C (%u)\r\n",
                     ch1_mv, ch1_raw, temp / 100, temp % 100, ch16_raw);
-        
+
         systick_delay_ms(200);
+
     }
     return 0;
 }

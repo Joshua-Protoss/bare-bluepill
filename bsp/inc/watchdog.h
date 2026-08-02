@@ -5,6 +5,11 @@
 
 #define IWDG_BASE                           (PERIPHERAL_APB1_BASE + 0x3000U)
 #define WWDG_BASE                           (PERIPHERAL_APB1_BASE + 0x2C00U)
+#define DBGMCU_CR                           REG32(0xE0042004U)
+
+// Debug bits
+#define DBG_IWDG_STOP                       BIT(8)
+#define DBG_WWDG_STOP                       BIT(9)
 
 typedef struct {
     volatile uint32_t KR;              // Key register
@@ -33,5 +38,6 @@ typedef enum {
 
 void iwdg_init(IWDG_prescaler_t prescaler, uint16_t reload);
 void iwdg_kick(void);
+void iwdg_freeze_in_debug(void);                            // freeze during debugging
 
 #endif
