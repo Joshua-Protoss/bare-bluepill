@@ -27,6 +27,23 @@
 #define RCC_APB2_ENR                            REG32(RCC_BASE + RCC_APB2_ENR_OFFSET)
 #define FLASH_ACR                               REG32(0x40022000)
 
+typedef struct {
+    volatile uint32_t CR;
+    volatile uint32_t CFGR;
+    volatile uint32_t CIR;
+    volatile uint32_t APB2RSTR;
+    volatile uint32_t APB1RSTR;
+    volatile uint32_t AHBENR;
+    volatile uint32_t APB2ENR;
+    volatile uint32_t APB1ENR;
+    volatile uint32_t BDCR;
+    volatile uint32_t CSR;
+    volatile uint32_t AHBRSTR;                  // doesn't exist in bluepill
+    volatile uint32_t CFGR2;                    // doesn't exist in bluepill
+} RCC_reg_t;
+
+#define RCC                                     ((volatile RCC_reg_t *) RCC_BASE)
+
 // RCC_CR BITS
 #define RCC_CR_HSION                            BIT(0)
 #define RCC_CR_HSIRDY                           BIT(1)
@@ -57,6 +74,17 @@
 #define RCC_CFGR_PLLMUL_SHIFT                   18      // PLL MULTIPLIER
 #define RCC_CFGR_USBPRE_SHIFT                   22   
 
+// RCC_CSR bits
+#define RCC_CSR_LSION                           BIT(0)      // Internal low speed oscillator enable
+#define RCC_CSR_LSIRDY                          BIT(1)      // Internal low speed oscillator ready
+#define RCC_CSR_RMVF                            BIT(24)     // Remove reset flag
+#define RCC_CSR_PINRSTF                         BIT(26)     // PIN reset flag
+#define RCC_CSR_PORRSTF                         BIT(27)     // POR/PDR reset flag
+#define RCC_CSR_SFTRSTF                         BIT(28)     // Software reset flag
+#define RCC_CSR_IWDGRSTF                        BIT(29)     // Independent watchdog reset flag
+#define RCC_CSR_WWDGRSTF                        BIT(30)     // Window watchdog reset flag
+#define RCC_CSR_LPWRRSTF                        BIT(31)     // Low-power reset flag
+
 // FLASH_ACR bit shift positions
 #define FLASH_ACR_LATENCY_SHIFT                 0
 #define FLASH_ACR_HLFCYA                        BIT(3)
@@ -64,31 +92,31 @@
 #define FLASH_ACR_PRFTBS                        BIT(5) 
 
 // FLASH_ACR_LATENCY wait states
-#define FLASH_ACR_ZERO_WS       0x00    // if 0 < SYSCLK < 24MHz
-#define FLASH_ACR_ONE_WS        0x01    // if 24MHz < SYSCLK < 48MHz
-#define FLASH_ACR_TWO_WS        0x02    // if 48 MHz < SYSCLK < 72MHZ
+#define FLASH_ACR_ZERO_WS                       0x00    // if 0 < SYSCLK < 24MHz
+#define FLASH_ACR_ONE_WS                        0x01    // if 24MHz < SYSCLK < 48MHz
+#define FLASH_ACR_TWO_WS                        0x02    // if 48 MHz < SYSCLK < 72MHZ
 
 // Bit positions for AHB peripherals
-#define RCC_DMA1_BIT             0
-#define RCC_DMA2_BIT             1      // there is no DMA2 in bluepill
+#define RCC_DMA1_BIT                            0
+#define RCC_DMA2_BIT                            1      // there is no DMA2 in bluepill
 
 // Bit positions for APB2 peripherals
-#define RCC_GPIOA_BIT            2      // GPIOA
-#define RCC_GPIOB_BIT            3      // GPIOB
-#define RCC_GPIOC_BIT            4      // GPIOC
-#define RCC_GPIOD_BIT            5      // GPIOD
-#define RCC_GPIOE_BIT            6      // GPIOE
-#define RCC_GPIOF_BIT            7      // GPIOF
-#define RCC_GPIOG_BIT            8      // GPIOG
-#define RCC_ADC1_BIT             9      // ADC1
-#define RCC_ADC2_BIT             10     // ADC2
-#define RCC_TIM1_BIT             11     // TIM1
+#define RCC_GPIOA_BIT                           2      // GPIOA
+#define RCC_GPIOB_BIT                           3      // GPIOB
+#define RCC_GPIOC_BIT                           4      // GPIOC
+#define RCC_GPIOD_BIT                           5      // GPIOD
+#define RCC_GPIOE_BIT                           6      // GPIOE
+#define RCC_GPIOF_BIT                           7      // GPIOF
+#define RCC_GPIOG_BIT                           8      // GPIOG
+#define RCC_ADC1_BIT                            9      // ADC1
+#define RCC_ADC2_BIT                            10     // ADC2
+#define RCC_TIM1_BIT                            11     // TIM1
 
 // Bit positions for APB1 peripherals
-#define RCC_TIM2_BIT             0
-#define RCC_TIM3_BIT             1 
-#define RCC_USART1_BIT           14       
-#define RCC_USART2_BIT           17
+#define RCC_TIM2_BIT                            0
+#define RCC_TIM3_BIT                            1 
+#define RCC_USART1_BIT                          14       
+#define RCC_USART2_BIT                          17
 
 // encoded clock enable values
 enum rcc_periph_clken {

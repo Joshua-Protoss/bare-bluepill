@@ -36,6 +36,9 @@ typedef enum {
     IWDG_PR_DIV256      = 0x06,                             // 156.25Hz, max ~1677.7s
 }IWDG_prescaler_t;
 
+// Watchdog clock = 40000 / (div64) =  625Hz
+// Timeout period = (1/Watchdog clock) x reload value = (1 / 625) x 625 = 1 second
+
 void iwdg_init(IWDG_prescaler_t prescaler, uint16_t reload);
 void iwdg_kick(void);
 void iwdg_freeze_in_debug(void);                            // freeze during debugging

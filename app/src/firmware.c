@@ -100,6 +100,10 @@ void adc_setup(){
 }
 
 int main(void) {
+    #if ENABLE_WATCHDOG
+        iwdg_freeze_in_debug();
+    #endif
+
     rcc_clock_configure(&RCC_CLOCK_HSE_44MHZ);
     systick_set_frequency(SYSTICK_FREQ, rcc_get_ahb_freq());        // 1ms tick, interrupt enabled by default
     rcc_periph_clock_enable(RCC_GPIOC);
@@ -108,15 +112,30 @@ int main(void) {
     adc_setup();
 
     #if ENABLE_WATCHDOG 
-        iwdg_init(IWDG_PR_DIV32, 125);
-        iwdg_freeze_in_debug();  
+        // Check if we recovered from watchdog reset
+        if (RCC->CSR & RCC_CSR_IWDGRSTF) {                                      // IWDGRSTF flag
+            usart_printf(USART1, "*** RECOVERED FROM WATCHDOG RESET ***\r\n");
+            // Blink LED 5 times quickly to visually indicate recovery
+            for (int i = 0; i < 5; i++) {
+                gpio_toggle_pin(PORT_GPIOC, PIN_GPIO13);
+                systick_delay_ms(100);
+            }
+            RCC->CSR |= RCC_CSR_RMVF;                                           // Clear reset flags
+        }  
+        iwdg_init(IWDG_PR_DIV64, 625);
+        usart_printf(USART1, "Watchdog enabled \r\n");
     #endif
+
+    uint32_t loop_count = 0;
 
     while(1){
 
         #if ENABLE_WATCHDOG
             iwdg_kick();
         #endif
+
+        // Print loop count so you can see how many complete before reset
+        usart_printf(USART1, "Loop %lu: ", loop_count++);
 
         uint16_t inj_results[2];
         adc_injected_read(ADC1, inj_results, 2);
@@ -128,9 +147,9 @@ int main(void) {
         usart_printf(USART1, "CH1: %lu mv (%u) | Temp: %ld.%02ld C (%u)\r\n",
                     ch1_mv, ch1_raw, temp / 100, temp % 100, ch16_raw);
 
-        systick_delay_ms(200);
-
+        systick_delay_ms(1000);
     }
+
     return 0;
 }
 
