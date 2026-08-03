@@ -147,7 +147,7 @@ int main(void) {
         usart_printf(USART1, "CH1: %lu mv (%u) | Temp: %ld.%02ld C (%u)\r\n",
                     ch1_mv, ch1_raw, temp / 100, temp % 100, ch16_raw);
 
-        systick_delay_ms(1000);
+        systick_delay_ms(1500);
     }
 
     return 0;

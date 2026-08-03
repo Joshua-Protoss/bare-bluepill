@@ -25,7 +25,7 @@ void iwdg_init(IWDG_prescaler_t prescaler, uint16_t reload) {
     while (IWDG->SR & BIT(1));                      // Wait for RVU
 
     // Refresh the counter immediately to start with a full countdown
-    IWDG->RLR = IWDG_KR_KEY_RELOAD;
+    IWDG->KR = IWDG_KR_KEY_ENABLE;
 }
 
 void iwdg_kick(void) {
