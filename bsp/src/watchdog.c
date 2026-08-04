@@ -40,7 +40,7 @@ void iwdg_freeze_in_debug(void) {
 
 void wwdg_init(WWDG_prescaler_t prescaler, uint8_t reload, uint8_t window) {
      // Enable WWDG clock
-     rcc_periph_clken(RCC_WWDG);
+     rcc_periph_clock_enable(RCC_WWDG);
 
      // Set window value
      WWDG->CFR = (window & 0x7F) | prescaler;
@@ -57,10 +57,3 @@ void wwdg_enable_ewi(void) {
     WWDG->CFR |= WWDG_CFR_EWI;
 }
 
-void wwdg_isr(void) {
-    // Check if the Early Wakeup Interrupt flag is set
-    if (WWDG->SR & WWDG_SR_EWIF) {
-        // Clear the flag by writing 0 (per reference manual)
-        WWDG->SR &= ~WWDG_SR_EWIF;
-    }
-}

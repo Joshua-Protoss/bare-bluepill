@@ -8,7 +8,7 @@
 #include "adc.h"
 #include "watchdog.h"
 
-#define ENABLE_WATCHDOG                 1
+#define ENABLE_WWDG                     1
 #define SYSTICK_FREQ                    (1000)            // the desired systick frequency, 1000Hz means 1ms per tick  
 #define ADC_PORT                        (PORT_GPIOA)      // this is an external LED connected to PA0
 #define ADC_PIN                         (PIN_GPIO1)
@@ -99,15 +99,16 @@ void adc_setup(){
     usart_printf(USART1, "GPIOA_CRL: 0x%08lX\r\n", crl);
 }
 
-void watchdog_setup() {
-    // APB1 = 44 MHz / 2 = 22 MHz
+void wwdg_isr(void) {
+    // Check if the Early Wakeup Interrupt flag is set
+    if (WWDG->SR & WWDG_SR_EWIF) {
+        // Clear the flag by writing 0 (per reference manual)
+        gpio_toggle_pin(PORT_GPIOC, PIN_GPIO13);   // LED toggle
+        WWDG->SR &= ~WWDG_SR_EWIF;              // Clear flag
+    }
 }
 
 int main(void) {
-    #if ENABLE_WATCHDOG
-        iwdg_freeze_in_debug();
-    #endif
-
     rcc_clock_configure(&RCC_CLOCK_HSE_44MHZ);
     systick_set_frequency(SYSTICK_FREQ, rcc_get_ahb_freq());        // 1ms tick, interrupt enabled by default
     rcc_periph_clock_enable(RCC_GPIOC);
@@ -115,43 +116,53 @@ int main(void) {
     uart_setup();
     adc_setup();
 
-    #if ENABLE_WATCHDOG 
-        // Check if we recovered from watchdog reset
-        if (RCC->CSR & RCC_CSR_IWDGRSTF) {                                      // IWDGRSTF flag
-            usart_printf(USART1, "*** RECOVERED FROM WATCHDOG RESET ***\r\n");
-            // Blink LED 5 times quickly to visually indicate recovery
-            for (int i = 0; i < 5; i++) {
-                gpio_toggle_pin(PORT_GPIOC, PIN_GPIO13);
-                systick_delay_ms(100);
-            }
-            RCC->CSR |= RCC_CSR_RMVF;                                           // Clear reset flags
-        }  
-        iwdg_init(IWDG_PR_DIV64, 625);
-        usart_printf(USART1, "Watchdog enabled \r\n");
+    // Check if we recovered from a fault
+    if (RCC->CSR & RCC_CSR_WWDGRSTF) {
+        RCC->CSR |= RCC_CSR_RMVF;               // Clear reset flags
+
+        // Blink LED slowly to show WWDG caught a violation
+        for (uint8_t i = 0; i < 3; i++) {
+            gpio_toggle_pin(PORT_GPIOC, PIN_GPIO13);
+            systick_delay_ms(200);
+        }
+    }
+    
+    #if ENABLE_WWDG 
+        wwdg_init(WWDG_PRESCALER_8, 127, 120);  // ~1.49 ms per tick, (100-63)*1.49 ~= 55.1ms
+        wwdg_enable_ewi();
+        usart_printf(USART1, "WWDG Configured Successfully. Window open between 55.1ms and 95.3ms.\r\n\r\n");
     #endif
 
-    uint32_t loop_count = 0;
+    uint32_t last_execution_time = 0;
 
     while(1){
+        // Measure real elapsed time using Systick
+        uint32_t current_time = systick_ticks;
 
-        #if ENABLE_WATCHDOG
-            iwdg_kick();
-        #endif
+        // Execute printing and ADC math exactly every 70 milliseconds
+        // 70ms is safely inside 55.1ms - 95.3ms execution window
+        if ((current_time - last_execution_time) >= 70) {
+            last_execution_time = current_time;
 
-        // Print loop count so you can see how many complete before reset
-        usart_printf(USART1, "Loop %lu: ", loop_count++);
+            // Read WWDG counter for display
+            uint8_t wwdg_cnt = WWDG->CR & 0x7F;
+            // Print loop info (takes ~2ms)
+            usart_printf(USART1, "WWDG=%d ", wwdg_cnt);
 
-        uint16_t inj_results[2];
-        adc_injected_read(ADC1, inj_results, 2);
-        uint16_t ch1_raw = inj_results[0];                       // Potentiometer
-        uint16_t ch16_raw = inj_results[1];                      // Temperature
-        uint32_t ch1_mv = (ch1_raw * 3300) / 4096;
-        int32_t temp = convert_internal_temp(ch16_raw);
+            uint16_t inj_results[2];
+            adc_injected_read(ADC1, inj_results, 2);
+            uint16_t ch1_raw = inj_results[0];                       // Potentiometer
+            uint16_t ch16_raw = inj_results[1];                      // Temperature
+            uint32_t ch1_mv = (ch1_raw * 3300) / 4096;
+            int32_t temp = convert_internal_temp(ch16_raw);
 
-        usart_printf(USART1, "CH1: %lu mv (%u) | Temp: %ld.%02ld C (%u)\r\n",
-                    ch1_mv, ch1_raw, temp / 100, temp % 100, ch16_raw);
+            usart_printf(USART1, "CH1: %lu mv (%u) | Temp: %ld.%02ld C (%u)\r\n",
+                        ch1_mv, ch1_raw, temp / 100, temp % 100, ch16_raw);
+            
+            wwdg_kick(127);
 
-        systick_delay_ms(1500);
+        }
+        // CPU free to do background task
     }
 
     return 0;
