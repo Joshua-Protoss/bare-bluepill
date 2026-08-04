@@ -99,6 +99,10 @@ void adc_setup(){
     usart_printf(USART1, "GPIOA_CRL: 0x%08lX\r\n", crl);
 }
 
+void watchdog_setup() {
+    // APB1 = 44 MHz / 2 = 22 MHz
+}
+
 int main(void) {
     #if ENABLE_WATCHDOG
         iwdg_freeze_in_debug();

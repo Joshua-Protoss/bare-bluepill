@@ -8,6 +8,7 @@ extern uint32_t _stack, _sidata, _edata, _bss, _ebss, _data;
 int main(void);
 void default_handler(void);
 void reset_handler(void);
+void wwdg_isr(void);
 void nmi_handler(void);
 void hard_fault_handler(void);
 void bus_fault_handler(void);
@@ -37,6 +38,7 @@ vector_table_t vector_table = {
     .pend_sv = default_handler,
     .systick = systick_handler,
     .irq_handler = {
+        [NVIC_WWDG_IRQ]          = wwdg_isr,                    // Window Watchdog = IRQ 0
         [NVIC_DMA1_CHANNEL1_IRQ] = dma1_channel1_isr,           // DMA1 Channel1 = IRQ 11 ADC1
         [NVIC_DMA1_CHANNEL2_IRQ] = dma1_channel2_isr,           // DMA1 Channel2 = IRQ 12 SPI1_RX   
         [NVIC_DMA1_CHANNEL3_IRQ] = dma1_channel3_isr,           // DMA1 Channel3 = IRQ 13 SPI1_TX  
@@ -50,7 +52,7 @@ vector_table_t vector_table = {
     }
 };
 
-void __attribute__((weak,used)) reset_handler(void){
+void __attribute__((weak,used)) reset_handler(void) {
     volatile uint32_t *src, *dest;
 
     // copy all data initial values in FLASH (.data section) into pointer dest
@@ -88,6 +90,7 @@ void bus_fault_handler(void) {
     }
 }
 
+void wwdg_isr(void) __attribute__((weak, used, alias("default_handler")));
 void hard_fault_handler(void) __attribute__((weak, used, alias("default_handler")));
 void dma1_channel1_isr(void) __attribute__((weak, used, alias("default_handler")));
 void dma1_channel2_isr(void) __attribute__((weak, used, alias("default_handler")));

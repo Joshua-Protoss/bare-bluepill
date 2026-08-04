@@ -35,6 +35,32 @@ void iwdg_kick(void) {
 void iwdg_freeze_in_debug(void) {
     // DBGMCU_CR: Debug MCU Configuration Register
     // Bit 8: DBG_IWDG_STOP - Stop IWDG when core is halted
-
     DBGMCU_CR |= DBG_IWDG_STOP;
+}
+
+void wwdg_init(WWDG_prescaler_t prescaler, uint8_t reload, uint8_t window) {
+     // Enable WWDG clock
+     rcc_periph_clken(RCC_WWDG);
+
+     // Set window value
+     WWDG->CFR = (window & 0x7F) | prescaler;
+
+     // Set counter and enable
+     WWDG->CR = WWDG_CR_WDGA | (reload & 0x7F);
+}
+
+void wwdg_kick(uint8_t counter_value) {
+    WWDG->CR = WWDG_CR_WDGA | (counter_value & 0x7F);
+}
+
+void wwdg_enable_ewi(void) {
+    WWDG->CFR |= WWDG_CFR_EWI;
+}
+
+void wwdg_isr(void) {
+    // Check if the Early Wakeup Interrupt flag is set
+    if (WWDG->SR & WWDG_SR_EWIF) {
+        // Clear the flag by writing 0 (per reference manual)
+        WWDG->SR &= ~WWDG_SR_EWIF;
+    }
 }

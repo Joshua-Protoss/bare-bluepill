@@ -101,22 +101,42 @@ typedef struct {
 #define RCC_DMA2_BIT                            1      // there is no DMA2 in bluepill
 
 // Bit positions for APB2 peripherals
-#define RCC_GPIOA_BIT                           2      // GPIOA
-#define RCC_GPIOB_BIT                           3      // GPIOB
-#define RCC_GPIOC_BIT                           4      // GPIOC
-#define RCC_GPIOD_BIT                           5      // GPIOD
-#define RCC_GPIOE_BIT                           6      // GPIOE
-#define RCC_GPIOF_BIT                           7      // GPIOF
-#define RCC_GPIOG_BIT                           8      // GPIOG
-#define RCC_ADC1_BIT                            9      // ADC1
-#define RCC_ADC2_BIT                            10     // ADC2
-#define RCC_TIM1_BIT                            11     // TIM1
+#define RCC_GPIOA_BIT                           2      
+#define RCC_GPIOB_BIT                           3      
+#define RCC_GPIOC_BIT                           4      
+#define RCC_GPIOD_BIT                           5      
+#define RCC_GPIOE_BIT                           6      
+#define RCC_GPIOF_BIT                           7      
+#define RCC_GPIOG_BIT                           8      
+#define RCC_ADC1_BIT                            9     
+#define RCC_ADC2_BIT                            10    
+#define RCC_TIM1_BIT                            11    
+#define RCC_USART1_BIT                          14 
 
 // Bit positions for APB1 peripherals
 #define RCC_TIM2_BIT                            0
 #define RCC_TIM3_BIT                            1 
-#define RCC_USART1_BIT                          14       
+#define RCC_TIM4_BIT                            2
+#define RCC_TIM5_BIT                            3
+#define RCC_TIM6_BIT                            4
+#define RCC_TIM7_BIT                            5
+#define RCC_TIM12_BIT                           6
+#define RCC_TIM13_BIT                           7
+#define RCC_TIM14_BIT                           8
+#define RCC_WWDGEN_BIT                          11
+#define RCC_SPI2EN_BIT                          14
+#define RCC_SPI3EN_BIT                          15
 #define RCC_USART2_BIT                          17
+#define RCC_USART3_BIT                          18
+#define RCC_USART4_BIT                          19
+#define RCC_USART5_BIT                          20
+#define RCC_I2C1EN_BIT                          21
+#define RCC_I2C2EN_BIT                          22
+#define RCC_USBEN_BIT                           23
+#define RCC_CANEN_BIT                           25
+#define RCC_BKPEN                               BIT(27)
+#define RCC_PWREN                               BIT(28)
+#define RCC_DACEN_BIT                           29
 
 // encoded clock enable values
 enum rcc_periph_clken {
@@ -127,10 +147,11 @@ enum rcc_periph_clken {
     // APB1 peripherals
     RCC_TIM2 = RCC_ENCODE(RCC_APB1_ENR_OFFSET, RCC_TIM2_BIT),
     RCC_TIM3 = RCC_ENCODE(RCC_APB1_ENR_OFFSET, RCC_TIM3_BIT),
-    RCC_USART1 = RCC_ENCODE(RCC_APB2_ENR_OFFSET, RCC_USART1_BIT),
     RCC_USART2 = RCC_ENCODE(RCC_APB1_ENR_OFFSET, RCC_USART2_BIT),
+    RCC_WWDG = RCC_ENCODE(RCC_APB1_ENR_OFFSET, RCC_WWDGEN_BIT),
 
     // APB2 peripherals
+    RCC_USART1 = RCC_ENCODE(RCC_APB2_ENR_OFFSET, RCC_USART1_BIT),
     RCC_GPIOA = RCC_ENCODE(RCC_APB2_ENR_OFFSET, RCC_GPIOA_BIT),
     RCC_GPIOB = RCC_ENCODE(RCC_APB2_ENR_OFFSET, RCC_GPIOB_BIT),
     RCC_GPIOC = RCC_ENCODE(RCC_APB2_ENR_OFFSET, RCC_GPIOC_BIT),
