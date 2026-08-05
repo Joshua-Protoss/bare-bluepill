@@ -30,7 +30,7 @@ bool systick_set_frequency(uint32_t desired_freq, uint32_t ahb_freq){
     if ((ticks - 1) <= SYSTICK_RELOAD_MAX){
         SYSTICK->SYST_CSR |= SYST_CSR_CLKSOURCE;        // set it to 1, AHB freq
     } else {
-        ticks = (ahb_freq / 8) / desired_freq;
+        ticks = ahb_freq / (desired_freq * 8);
 
         // checks again
         if ((ticks - 1) <= SYSTICK_RELOAD_MAX){

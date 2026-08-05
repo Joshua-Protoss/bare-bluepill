@@ -128,20 +128,20 @@ int main(void) {
     }
     
     #if ENABLE_WWDG 
-        wwdg_init(WWDG_PRESCALER_8, 127, 120);  // ~1.49 ms per tick, (100-63)*1.49 ~= 55.1ms
+        wwdg_init(WWDG_PRESCALER_8, 127, 80);  // ~1.49 ms per tick, (100-63)*1.49 ~= 55.1ms
         wwdg_enable_ewi();
         usart_printf(USART1, "WWDG Configured Successfully. Window open between 55.1ms and 95.3ms.\r\n\r\n");
     #endif
 
-    uint32_t last_execution_time = 0;
+    uint32_t last_execution_time = systick_ticks;
 
     while(1){
         // Measure real elapsed time using Systick
         uint32_t current_time = systick_ticks;
 
-        // Execute printing and ADC math exactly every 70 milliseconds
-        // 70ms is safely inside 55.1ms - 95.3ms execution window
-        if ((current_time - last_execution_time) >= 70) {
+        // Execute printing and ADC math exactly every 72 milliseconds, (120-80)*1.49 ms ~= 70ms
+        // 72ms is safely inside 70ms - 95.3ms execution window
+        if ((current_time - last_execution_time) >= 71) {
             last_execution_time = current_time;
 
             // Read WWDG counter for display
