@@ -70,7 +70,7 @@ void adc_setup(){
 
     // Configure Timer1 as output compare
     rcc_periph_clock_enable(RCC_TIM1);
-    tim_init(TIM1, &TIM1_ADC_TRIG_1KHz, rcc_get_apb2_freq());               // 44MHz (APB2_DIV_1)
+    tim_oc_init(TIM1, &TIM1_ADC_TRIG_1KHz, rcc_get_apb2_freq());               // 44MHz (APB2_DIV_1)
     
     adc_injected_init(ADC1, &ADC_INJECT_TEST);
 
