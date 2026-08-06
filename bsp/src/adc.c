@@ -13,8 +13,8 @@
 void adc_init(volatile ADC_reg_t *adc, const ADC_config_t *config){
     
     // 1. Set ADC clock prescaler (must be ≤ 14 MHz!)
-    RCC_CFGR &= ~(0x03 << RCC_CFGR_ADCPRE_SHIFT);          // Clear ADCPRE bits
-    RCC_CFGR |= (config->prescaler << RCC_CFGR_ADCPRE_SHIFT);
+    RCC->CFGR &= ~(0x03 << RCC_CFGR_ADCPRE_SHIFT);          // Clear ADCPRE bits
+    RCC->CFGR |= (config->prescaler << RCC_CFGR_ADCPRE_SHIFT);
 
     // 2. Enable ADC clock
     rcc_periph_clock_enable(adc == ADC1 ? RCC_ADC1 : RCC_ADC2);
@@ -75,8 +75,8 @@ uint16_t adc_read(volatile ADC_reg_t *adc){
 
 void adc_scan_dma_init(volatile ADC_reg_t *adc, const ADC_scan_config_t *config, volatile DMA_Channel_reg_t *dma_channel, uint16_t *buffer){
     // 1. Set ADC clock prescaler
-    RCC_CFGR &= ~(0x03 << RCC_CFGR_ADCPRE_SHIFT);
-    RCC_CFGR |= (config->prescaler << RCC_CFGR_ADCPRE_SHIFT);
+    RCC->CFGR &= ~(0x03 << RCC_CFGR_ADCPRE_SHIFT);
+    RCC->CFGR |= (config->prescaler << RCC_CFGR_ADCPRE_SHIFT);
 
     // 2. Enable ADC & DMA clock
     rcc_periph_clock_enable(adc == ADC1 ? RCC_ADC1 : RCC_ADC2);
@@ -179,8 +179,8 @@ void adc_stop(volatile ADC_reg_t *adc){
 
 void adc_injected_init(volatile ADC_reg_t *adc, const ADC_injected_config_t *config) {
     // 1. Set ADC clock prescaler
-    RCC_CFGR &= ~(0x03 << RCC_CFGR_ADCPRE_SHIFT);
-    RCC_CFGR |= (config->prescaler << RCC_CFGR_ADCPRE_SHIFT);
+    RCC->CFGR &= ~(0x03 << RCC_CFGR_ADCPRE_SHIFT);
+    RCC->CFGR |= (config->prescaler << RCC_CFGR_ADCPRE_SHIFT);
 
     // 2. Enable ADC clock
     rcc_periph_clock_enable(adc == ADC1 ? RCC_ADC1 : RCC_ADC2);

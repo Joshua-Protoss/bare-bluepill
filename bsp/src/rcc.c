@@ -54,36 +54,37 @@ void rcc_clock_configure(const rcc_clock_config_t *config){
     if (config->sysclk_source == RCC_SYSCLK_HSE || 
         (config->sysclk_source == RCC_SYSCLK_PLL && config->pll_source == RCC_PLLSRC_HSE)){
         
-        RCC_CR &= ~RCC_CR_HSEBYP; // 0: external 4-16 MHz oscillator not bypassed, turn 1 if MCU receives an active clock signal and not a passive crystal
-        RCC_CR |= RCC_CR_HSEON;   // turn on HSE
-        while(!(RCC_CR & RCC_CR_HSERDY)); // wait until HSE ready
+        RCC->CR &= ~RCC_CR_HSEBYP;              // 0: external 4-16 MHz oscillator not bypassed, turn 1 if MCU receives an active clock signal and not a passive crystal
+        RCC->CR |= RCC_CR_HSEON;                // turn on HSE
+        while(!(RCC->CR & RCC_CR_HSERDY));      // wait until HSE ready
     }
 
     // === Configure PLL if used ===
     if (config->sysclk_source == RCC_SYSCLK_PLL) {
-        RCC_CR &= ~RCC_CR_PLLON;        // Turn off PLL before configuring, the hardware will automatically set PLLRDY to 0 (unlock)
-        while (RCC_CR & RCC_CR_PLLRDY);  // wait for PLL off (PLLRDY set to 0)
+        RCC->CR &= ~RCC_CR_PLLON;                   // Turn off PLL before configuring, the hardware will automatically set PLLRDY to 0 (unlock)
+        while(RCC->CR & RCC_CR_PLLRDY);             // wait for PLL off (PLLRDY set to 0)
 
         // Clear PLL config bits, and set HSE divider to 1 (default: not divided)
-        RCC_CFGR &= ~(RCC_CFGR_PLLSRC | RCC_CFGR_PLLXTPRE | (0x0F << RCC_CFGR_PLLMUL_SHIFT));
+        RCC->CFGR &= ~(RCC_CFGR_PLLSRC | RCC_CFGR_PLLXTPRE | (0x0F << RCC_CFGR_PLLMUL_SHIFT));
+
 
         // Set PLL source
         if (config->pll_source == RCC_PLLSRC_HSE) {
-            RCC_CFGR |= RCC_CFGR_PLLSRC;
+            RCC->CFGR |= RCC_CFGR_PLLSRC;
 
             // set HSE divider for PLL
             if (config->pll_hse_div == RCC_PLLXTPRE_DIV2){
-                RCC_CFGR |= RCC_CFGR_PLLXTPRE;
+                RCC->CFGR |= RCC_CFGR_PLLXTPRE;
             } 
             // else: RCC_CFGR_PLLXTPRE = 0 (HSE not divided, default)
         }
         
         // Set PLL multiplier
-        RCC_CFGR |= (config->pll_mult << RCC_CFGR_PLLMUL_SHIFT);
+        RCC->CFGR |= (config->pll_mult << RCC_CFGR_PLLMUL_SHIFT);
 
         // Enable PLL
-        RCC_CR |= RCC_CR_PLLON;
-        while(!(RCC_CR & RCC_CR_PLLRDY)); // wait for PLL ready
+        RCC->CR |= RCC_CR_PLLON;
+        while(!(RCC->CR & RCC_CR_PLLRDY)); // wait for PLL ready
     }
 
     // === Calculate new system clock frequency ===
@@ -113,40 +114,42 @@ void rcc_clock_configure(const rcc_clock_config_t *config){
     }
     
     // === Set flash latency to match the new clock speed ===
-    FLASH_ACR |= FLASH_ACR_PRFTBE;                              // Enable Prefetch buffer
-    FLASH_ACR &= ~(0x07 << FLASH_ACR_LATENCY_SHIFT);            // Clear any existing latency bits
+    FLASH->ACR |= FLASH_ACR_PRFTBE;
+    FLASH->ACR &= ~(0x07 << FLASH_ACR_LATENCY_SHIFT);
+    //FLASH_ACR |= FLASH_ACR_PRFTBE;                              // Enable Prefetch buffer
+    //FLASH_ACR &= ~(0x07 << FLASH_ACR_LATENCY_SHIFT);            // Clear any existing latency bits
 
     if (new_sysclk_freq <= 24000000) {
-        FLASH_ACR |= (FLASH_ACR_ZERO_WS << FLASH_ACR_LATENCY_SHIFT);
+        FLASH->ACR |= (FLASH_ACR_ZERO_WS << FLASH_ACR_LATENCY_SHIFT);
     } else if (new_sysclk_freq <= 48000000) {
-        FLASH_ACR |= (FLASH_ACR_ONE_WS << FLASH_ACR_LATENCY_SHIFT);
+        FLASH->ACR |= (FLASH_ACR_ONE_WS << FLASH_ACR_LATENCY_SHIFT);
     } else {
-        FLASH_ACR |= (FLASH_ACR_TWO_WS << FLASH_ACR_LATENCY_SHIFT);
+        FLASH->ACR |= (FLASH_ACR_TWO_WS << FLASH_ACR_LATENCY_SHIFT);
     }
 
     // === Configure bus prescalers ===
     // Clear bus prescalers bits
-    RCC_CFGR &= ~((0x0F << RCC_CFGR_HPRE_SHIFT) | (0x07 << RCC_CFGR_PPRE1_SHIFT) | (0x07 << RCC_CFGR_PPRE2_SHIFT));
+    RCC->CFGR &= ~((0x0F << RCC_CFGR_HPRE_SHIFT) | (0x07 << RCC_CFGR_PPRE1_SHIFT) | (0x07 << RCC_CFGR_PPRE2_SHIFT));
     // Set bus prescalers
-    RCC_CFGR |= (config->ahb_div << RCC_CFGR_HPRE_SHIFT) | (config->apb1_div << RCC_CFGR_PPRE1_SHIFT) | (config->apb2_div << RCC_CFGR_PPRE2_SHIFT);
+    RCC->CFGR |= (config->ahb_div << RCC_CFGR_HPRE_SHIFT) | (config->apb1_div << RCC_CFGR_PPRE1_SHIFT) | (config->apb2_div << RCC_CFGR_PPRE2_SHIFT);
     
     // === Switch system clock ===
-    RCC_CFGR &= ~(0x03 << RCC_CFGR_SW_SHIFT);                                       // Clear system switch bits
-    RCC_CFGR |= (config->sysclk_source << RCC_CFGR_SW_SHIFT);                       // Select system clock : HSI, HSE, or PLL
+    RCC->CFGR &= ~(0x03 << RCC_CFGR_SW_SHIFT);                                       // Clear system switch bits
+    RCC->CFGR |= (config->sysclk_source << RCC_CFGR_SW_SHIFT);                       // Select system clock : HSI, HSE, or PLL
 
     // Wait for switch
     uint32_t sws_mask = (config->sysclk_source == RCC_SYSCLK_PLL) ? 0x08 : (config->sysclk_source << 2);
     volatile uint32_t timeout = 100000;
-    while (((RCC_CFGR & 0x0C) != sws_mask) && --timeout); // wait for switch until timeout
+    while (((RCC->CFGR & 0x0C) != sws_mask) && --timeout); // wait for switch until timeout
     
     if (timeout == 0) { // handle fail switching, use HSI as fallback clock
-        if (!(RCC_CR & RCC_CR_HSIRDY)){ // just double check if HSI is ready
-            RCC_CR |= RCC_CR_HSION;
-            while (!(RCC_CR & RCC_CR_HSIRDY));
+        if (!(RCC->CR & RCC_CR_HSIRDY)){ // just double check if HSI is ready
+            RCC->CR |= RCC_CR_HSION;
+            while (!(RCC->CR & RCC_CR_HSIRDY));
         }
         // Switching back to HSI
-        RCC_CFGR &= ~(0x03 << RCC_CFGR_SW_SHIFT);           // Clear CFGR_SW bits = Set CFGR_SW to HSI (0x00)
-        while((RCC_CFGR & 0x0C) != RCC_CFGR_SW_HSI);        // wait for the switch status register to indicate HSI
+        RCC->CFGR &= ~(0x03 << RCC_CFGR_SW_SHIFT);           // Clear CFGR_SW bits = Set CFGR_SW to HSI (0x00)
+        while((RCC->CFGR & 0x0C) != RCC_CFGR_SW_HSI);        // wait for the switch status register to indicate HSI
 
         // Set current config to HSI (default)
         rcc_current_config = (rcc_clock_config_t){
@@ -158,7 +161,7 @@ void rcc_clock_configure(const rcc_clock_config_t *config){
 
     // === Turn off PLL if not used (power saving) ===
     if (config->sysclk_source != RCC_SYSCLK_PLL) {
-        RCC_CR &= ~RCC_CR_PLLON;
+        RCC->CR &= ~RCC_CR_PLLON;
     }
 
     // cache the configuration

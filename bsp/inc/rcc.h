@@ -9,23 +9,30 @@
 #define RCC_BIT_MASK(encoded)                   BIT((encoded) & 0x1F)
 
 // registers offsets (STM32F103)
-#define RCC_CR_OFFSET                           0x00
-#define RCC_CFGR_OFFSET                         0x04
-#define RCC_CIR_OFFSET                          0x08
 #define RCC_AHB_ENR_OFFSET                      0x14
 #define RCC_APB1_ENR_OFFSET                     0x1C
 #define RCC_APB2_ENR_OFFSET                     0x18
 
 // memory addresses
 #define RCC_BASE                                (0x40021000U)
-#define RCC_CR                                  REG32(RCC_BASE + RCC_CR_OFFSET)
-#define RCC_CFGR                                REG32(RCC_BASE + RCC_CFGR_OFFSET)
-#define RCC_CIR                                 REG32(RCC_BASE + RCC_CIR_OFFSET)
-#define FLASH_ACR                               REG32(0x40022000)   // flash access control register
+#define FLASH_BASE                              (0x40022000U)
 #define RCC_AHB_ENR                             REG32(RCC_BASE + RCC_AHB_ENR_OFFSET)
 #define RCC_APB1_ENR                            REG32(RCC_BASE + RCC_APB1_ENR_OFFSET)
 #define RCC_APB2_ENR                            REG32(RCC_BASE + RCC_APB2_ENR_OFFSET)
-#define FLASH_ACR                               REG32(0x40022000)
+
+typedef struct {
+    volatile uint32_t ACR;                      // Flash access control register
+    volatile uint32_t KEYR;                     // Flash key register
+    volatile uint32_t OPTKEYR;                  // Flash option key register
+    volatile uint32_t SR;                       // Flash status register
+    volatile uint32_t CR;                       // Flash control register
+    volatile uint32_t AR;                       // Flash address register
+    volatile uint32_t reserved;                 // reserved
+    volatile uint32_t OBR;                      // Option byte register
+    volatile uint32_t WRPR;                     // Write protection register
+} FLASH_reg_t;
+
+#define FLASH                                   ((volatile FLASH_reg_t *) FLASH_BASE)
 
 typedef struct {
     volatile uint32_t CR;

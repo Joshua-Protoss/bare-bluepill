@@ -5,7 +5,7 @@
 #include <stdbool.h>
 
 // Memory map for all busses
-#define FLASH_BASE                          (0x08000000U)
+#define FLASH_MEMORY_BASE                   (0x08000000U)
 #define PERIPHERAL_BASE                     (0x40000000U)
 #define PERIPHERAL_APB1_BASE                (PERIPHERAL_BASE + 0x00000U)
 #define PERIPHERAL_APB2_BASE                (PERIPHERAL_BASE + 0x10000U)

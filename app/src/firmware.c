@@ -81,7 +81,7 @@ void adc_setup(){
     volatile uint32_t cr2 = ADC1->CR2;
     volatile uint32_t sr  = ADC1->SR;
     volatile uint32_t sqr3 = ADC1->SQR3;
-    volatile uint32_t cfgr = RCC_CFGR;
+    volatile uint32_t cfgr = RCC->CFGR;
     volatile uint32_t smpr2 = ADC1->SMPR2;
     volatile uint32_t smpr1 = ADC1->SMPR1;
     usart_printf(USART1, "JSQR: 0x%08lX\r\n", jsqr);

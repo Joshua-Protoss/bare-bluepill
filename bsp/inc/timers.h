@@ -92,13 +92,63 @@ typedef enum {
 
 // ===== CCMR1 Bits =====
 #define TIM_CCMR1_CC1S_MASK                     (0x03 << 0)
-#define TIM_CCMR1_CC1S_OUTPUT                   (0x00 << 0)                              // output
-#define TIM_CCMR1_CC1S_INPUT_TI1                (0x01 << 0)                              // input
-#define TIM_CCMR1_CC1S_INPUT_TI2                (0x02 << 0)
-#define TIM_CCMR1_CC1S_INPUT_TRC                (0x03 << 0)
+#define TIM_CCMR1_CC1S_OUTPUT                   (0x00 << 0)                              // 00: Channel configured as Output
+#define TIM_CCMR1_CC1S_INPUT_TI1                (0x01 << 0)                              // 01: Input mapped on TI1
+#define TIM_CCMR1_CC1S_INPUT_TI2                (0x02 << 0)                              // 10: Input mapped on TI2
+#define TIM_CCMR1_CC1S_INPUT_TRC                (0x03 << 0)                              // 11: Input mapped on TRC (Trigger Input)
+
+/* --- Channel 1: Output Compare Mode View --- */
 #define TIM_CCMR1_OC1FE                         BIT(2)                                   // Output compare 1 fast enable
-#define TIM_CCMR1_OC1PE                         BIT(3)                                   // Output compare 1 preload
-#define TIM_CCMR1_OC1M_MASK                     (0x07 << 4)
+#define TIM_CCMR1_OC1PE                         BIT(3)                                   // Output Compare 1 Preload Enable
+#define TIM_CCMR1_OC1M_MASK                     (0x07 << 4)                              // Output Compare 1 Mode mask
+#define TIM_OC1CE                               BIT(7)                                   // Output Compare 1 Clear Enable
+
+/* --- Channel 1: Input Capture Mode View --- */
+#define TIM_CCMR1_CC1S_SHIFT                    (0)
+#define TIM_CCMR1_IC1PSC_MASK                   (0x03U << 2)                             // Input Capture 1 Prescaler mask (Shares bit 2-3)
+#define TIM_CCMR1_IC1F_MASK                     (0x0FU << 4)                             // Input Capture 1 Filter mask    (Shares bit 4-7)
+
+/* --- Channel 2 Multipliers (+8 bit shift from Channel 1) --- */
+#define TIM_CCMR1_CC2S_SHIFT                    (8)
+
+// ===== CCMR2 Bits =====
+#define TIM_CCMR2_CC3S_SHIFT                    (0)
+#define TIM_CCMR2_CC4S_SHIFT                    (8)
+
+// Input capture prescaler struct
+typedef enum {
+    TIM_IC_PSC_DIV1  = (0x00 << 2),                                      // Capture every event
+    TIM_IC_PSC_DIV2  = (0x01 << 2),                                      // Capture every 2nd event
+    TIM_IC_PSC_DIV4  = (0x02 << 2),                                      // Capture every 4th event
+    TIM_IC_PSC_DIV8  = (0x03 << 2),                                      // Capture every 8th event
+} tim_ic_prescaler_t;
+
+// Input filter (digital noise filter)
+typedef enum {
+    TIM_IC_FILTER_NONE              = (0x00 << 4),                       // No filter
+    TIM_IC_FILTER_CKINT_N2          = (0x01 << 4),                       // fSAMPLING = fCK_INT, N=2
+    TIM_IC_FILTER_CKINT_N4          = (0x02 << 4),                       // fSAMPLING = fCK_INT, N=4
+    TIM_IC_FILTER_CKINT_N8          = (0x03 << 4),                       // fSAMPLING = fCK_INT, N=8
+    TIM_IC_FILTER_DTS_DIV2_N6       = (0x04 << 4),                       // fSAMPLING = fDTS/2,  N=6
+    TIM_IC_FILTER_DTS_DIV2_N8       = (0x05 << 4),                       // fSAMPLING = fDTS/2,  N=8
+    TIM_IC_FILTER_DTS_DIV4_N6       = (0x06 << 4),                       // fSAMPLING = fDTS/4,  N=6
+    TIM_IC_FILTER_DTS_DIV4_N8       = (0x07 << 4),                       // fSAMPLING = fDTS/4,  N=8
+    TIM_IC_FILTER_DTS_DIV8_N6       = (0x08 << 4),                       // fSAMPLING = fDTS/8,  N=6
+    TIM_IC_FILTER_DTS_DIV8_N8       = (0x09 << 4),                       // fSAMPLING = fDTS/8,  N=8
+    TIM_IC_FILTER_DTS_DIV16_N5      = (0x0A << 4),                       // fSAMPLING = fDTS/16, N=5
+    TIM_IC_FILTER_DTS_DIV16_N6      = (0x0B << 4),                       // fSAMPLING = fDTS/16, N=6
+    TIM_IC_FILTER_DTS_DIV16_N8      = (0x0C << 4),                       // fSAMPLING = fDTS/16, N=8
+    TIM_IC_FILTER_DTS_DIV32_N5      = (0x0D << 4),                       // fSAMPLING = fDTS/32, N=5
+    TIM_IC_FILTER_DTS_DIV32_N6      = (0x0E << 4),                       // fSAMPLING = fDTS/32, N=6
+    TIM_IC_FILTER_DTS_DIV32_N8      = (0x0F << 4),                       // fSAMPLING = fDTS/32, N=8
+} tim_ic_filter_t;
+
+// Input capture edge selection
+typedef enum {
+    TIM_IC_EDGE_RISING      = 0,                             // CCxP=0 (default)
+    TIM_IC_EDGE_FALLING     = 1,                             // CCxP=1
+    TIM_IC_EDGE_BOTH        = 2,                             // Toggle CCxP on each capture
+} tim_ic_edge_t;
 
 // ===== CCER Bits =====
 #define TIM_CCER_CC1E                           BIT(0)
@@ -205,7 +255,7 @@ typedef enum {
     TIM_TRGO_CC4REF = 0x07,                                               // OC4REF signal
 } tim_trgo_t;
 
-// PWM configuration 
+// Output compare configuration struct
 typedef struct {
     uint32_t frequency;                                                  // Desired PWM frequency
     uint8_t duty_cycle;                                                  // Initial duty cycle (0-100)
@@ -218,11 +268,19 @@ typedef struct {
     tim_trgo_t trgo;
 } tim_config_t;
 
-// Function prototypes
+// Input capture configuration struct
+
+typedef struct {
+    uint32_t frequency;
+} tim_ic_config_t;
+
+// Function prototypes for output mode
 void tim_init(volatile TIM_reg_t *tim, const tim_config_t * config, uint32_t tim_clock_hz);
 void tim_set_duty_cycle(volatile TIM_reg_t *tim, tim_channel_t channel, uint8_t duty_percent);
 void tim_enable(volatile TIM_reg_t *tim);
 void tim_disable(volatile TIM_reg_t *tim);
+
+// Function prototypes for input mode
 
 extern const tim_config_t PWM_CH1_1KHZ_50;
 extern const tim_config_t PWM_CH2_1KHZ_50;
