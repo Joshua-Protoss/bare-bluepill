@@ -90,12 +90,12 @@ typedef enum {
 #define TIM_CR1_CKD_DIV2                        (0x01 << 8) 
 #define TIM_CR1_CKD_DIV4                        (0x02 << 8) 
 
-// ===== CCMR1 Bits =====
-#define TIM_CCMR1_CC1S_MASK                     (0x03 << 0)
-#define TIM_CCMR1_CC1S_OUTPUT                   (0x00 << 0)                              // 00: Channel configured as Output
-#define TIM_CCMR1_CC1S_INPUT_TI1                (0x01 << 0)                              // 01: Input mapped on TI1
-#define TIM_CCMR1_CC1S_INPUT_TI2                (0x02 << 0)                              // 10: Input mapped on TI2
-#define TIM_CCMR1_CC1S_INPUT_TRC                (0x03 << 0)                              // 11: Input mapped on TRC (Trigger Input)
+// ===== CCMR Bits =====
+#define TIM_CCMRx_CCxS_MASK                     (0x03 << 0)
+#define TIM_CCMRx_CCxS_OUTPUT                   (0x00 << 0)                              // 00: Channel configured as Output
+#define TIM_CCMRx_CCxS_INPUT_TI1                (0x01 << 0)                              // 01: Input mapped on TI1
+#define TIM_CCMRx_CCxS_INPUT_TI2                (0x02 << 0)                              // 10: Input mapped on TI2
+#define TIM_CCMRx_CCxS_INPUT_TRC                (0x03 << 0)                              // 11: Input mapped on TRC (Trigger Input)
 
 /* --- Channel 1: Output Compare Mode View --- */
 #define TIM_CCMR1_OC1FE                         BIT(2)                                   // Output compare 1 fast enable
@@ -111,7 +111,6 @@ typedef enum {
 /* --- Channel 2 Multipliers (+8 bit shift from Channel 1) --- */
 #define TIM_CCMR1_CC2S_SHIFT                    (8)
 
-// ===== CCMR2 Bits =====
 #define TIM_CCMR2_CC3S_SHIFT                    (0)
 #define TIM_CCMR2_CC4S_SHIFT                    (8)
 
@@ -148,7 +147,7 @@ typedef enum {
     TIM_IC_EDGE_RISING      = 0,                             // CCxP=0 (default)
     TIM_IC_EDGE_FALLING     = 1,                             // CCxP=1
     TIM_IC_EDGE_BOTH        = 2,                             // Toggle CCxP on each capture, not supported in STM32F103
-} tim_ic_edge_t;
+} tim_ic_polarity_t;
 
 // Input capture mode
 typedef enum {
@@ -159,7 +158,7 @@ typedef enum {
 
 // ===== CCER Bits =====
 #define TIM_CCER_CC1E                           BIT(0)
-#define TIM_CCER_CC1P                           BIT(1)                                      // determine wether active means HIGH or LOW
+#define TIM_CCER_CC1P                           BIT(1)                   // determine wether active means HIGH or LOW
 #define TIM_CCER_CC1NE                          BIT(2)
 #define TIM_CCER_CC1NP                          BIT(3)
 #define TIM_CCER_CC2E                           BIT(4)
@@ -280,7 +279,7 @@ typedef struct {
     uint32_t timer_clock_hz;                                              // Timer base clock
     tim_channel_t channel;                                                // Which channel
     tim_ic_mode_t ic_mode;                                                // Capture mode
-    tim_ic_edge_t edge;                                                   // Which edge to capture
+    tim_ic_polarity_t edge;                                               // Which edge to capture
     tim_ic_prescaler_t prescaler;                                         // Event prescaler
     tim_ic_filter_t filter;                                               // Input filter
     bool enable_interrupt;                                                // Enable CC interrupt
