@@ -166,7 +166,6 @@ void adc_scan_dma_init(volatile ADC_reg_t *adc, const ADC_scan_config_t *config,
     } else {
         adc->CR2 |= ADC_CR2_DMA;
     }
-             
 }
 
 void adc_start(volatile ADC_reg_t *adc){

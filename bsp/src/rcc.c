@@ -114,10 +114,8 @@ void rcc_clock_configure(const rcc_clock_config_t *config){
     }
     
     // === Set flash latency to match the new clock speed ===
-    FLASH->ACR |= FLASH_ACR_PRFTBE;
-    FLASH->ACR &= ~(0x07 << FLASH_ACR_LATENCY_SHIFT);
-    //FLASH_ACR |= FLASH_ACR_PRFTBE;                              // Enable Prefetch buffer
-    //FLASH_ACR &= ~(0x07 << FLASH_ACR_LATENCY_SHIFT);            // Clear any existing latency bits
+    FLASH->ACR |= FLASH_ACR_PRFTBE;                                 // Enable Prefetch buffer
+    FLASH->ACR &= ~(0x07 << FLASH_ACR_LATENCY_SHIFT);               // Clear any existing latency bits           
 
     if (new_sysclk_freq <= 24000000) {
         FLASH->ACR |= (FLASH_ACR_ZERO_WS << FLASH_ACR_LATENCY_SHIFT);

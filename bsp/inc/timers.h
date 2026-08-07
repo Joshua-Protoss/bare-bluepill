@@ -147,8 +147,15 @@ typedef enum {
 typedef enum {
     TIM_IC_EDGE_RISING      = 0,                             // CCxP=0 (default)
     TIM_IC_EDGE_FALLING     = 1,                             // CCxP=1
-    TIM_IC_EDGE_BOTH        = 2,                             // Toggle CCxP on each capture
+    TIM_IC_EDGE_BOTH        = 2,                             // Toggle CCxP on each capture, not supported in STM32F103
 } tim_ic_edge_t;
+
+// Input capture mode
+typedef enum {
+    TIM_IC_MODE_DIRECT,                                      // Direct input on TIx
+    TIM_IC_MODE_INDIRECT,                                    // Indirect (cross-channel)
+    TIM_IC_MODE_PWM_INPUT,                                   // PWM input mode (special)
+} tim_ic_mode_t;
 
 // ===== CCER Bits =====
 #define TIM_CCER_CC1E                           BIT(0)
@@ -266,24 +273,38 @@ typedef struct {
     tim_cms_t cms_mode;       
     tim_dir_t direction;
     tim_trgo_t trgo;
-} tim_config_t;
+} tim_oc_config_t;
 
 // Input capture configuration struct
-
 typedef struct {
-    uint32_t frequency;
+    uint32_t timer_clock_hz;                                              // Timer base clock
+    tim_channel_t channel;                                                // Which channel
+    tim_ic_mode_t ic_mode;                                                // Capture mode
+    tim_ic_edge_t edge;                                                   // Which edge to capture
+    tim_ic_prescaler_t prescaler;                                         // Event prescaler
+    tim_ic_filter_t filter;                                               // Input filter
+    bool enable_interrupt;                                                // Enable CC interrupt
 } tim_ic_config_t;
 
 // Function prototypes for output mode
-void tim_init(volatile TIM_reg_t *tim, const tim_config_t * config, uint32_t tim_clock_hz);
-void tim_set_duty_cycle(volatile TIM_reg_t *tim, tim_channel_t channel, uint8_t duty_percent);
+void tim_oc_init(volatile TIM_reg_t *tim, const tim_oc_config_t *config, uint32_t tim_clock_hz);
+void tim_oc_set_duty_cycle(volatile TIM_reg_t *tim, tim_channel_t channel, uint8_t duty_percent);
 void tim_enable(volatile TIM_reg_t *tim);
 void tim_disable(volatile TIM_reg_t *tim);
 
 // Function prototypes for input mode
+void tim_ic_init(volatile TIM_reg_t *tim, const tim_ic_config_t *config);
+uint32_t tim_ic_get_capture(volatile TIM_reg_t *tim, tim_channel_t channel);
+float tim_ic_calculate_frequency(volatile TIM_reg_t *tim, tim_channel_t channel);
+float tim_ic_calculate_period_ms(volatile TIM_reg_t *tim, tim_channel_t channel);
 
-extern const tim_config_t PWM_CH1_1KHZ_50;
-extern const tim_config_t PWM_CH2_1KHZ_50;
-extern const tim_config_t TIM1_ADC_TRIG_1KHz;
+// PWM input mode (for reading RC signals, etc.)
+void tim_ic_pwm_init(volatile TIM_reg_t *tim, tim_channel_t channel);
+float tim_ic_get_duty_cycle(volatile TIM_reg_t *tim);
+uint32_t tim_ic_get_period(volatile TIM_reg_t *tim);
+
+extern const tim_oc_config_t PWM_CH1_1KHZ_50;
+extern const tim_oc_config_t PWM_CH2_1KHZ_50;
+extern const tim_oc_config_t TIM1_ADC_TRIG_1KHz;
 
 #endif // INC_TIMERS_H

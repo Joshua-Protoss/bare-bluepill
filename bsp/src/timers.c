@@ -30,7 +30,7 @@ static bool tim_calculate_prescaler_arr(uint32_t tim_clock, uint32_t desired_fre
     return false; // Cannot achieve this frequency
 }
 
-void tim_init(volatile TIM_reg_t *tim, const tim_config_t *config, uint32_t tim_clock) {
+void tim_oc_init(volatile TIM_reg_t *tim, const tim_oc_config_t *config, uint32_t tim_clock) {
     uint32_t psc, arr, calculation_clock;
     calculation_clock = tim_clock;
 
@@ -86,7 +86,7 @@ void tim_init(volatile TIM_reg_t *tim, const tim_config_t *config, uint32_t tim_
     }
 
     // Set initial duty cycle
-    tim_set_duty_cycle(tim, config->channel, config->duty_cycle);
+    tim_oc_set_duty_cycle(tim, config->channel, config->duty_cycle);
 
     // Enable auto-reload preload
     tim->CR1 |= TIM_CR1_ARPE;
@@ -109,7 +109,7 @@ void tim_init(volatile TIM_reg_t *tim, const tim_config_t *config, uint32_t tim_
     tim->CR1 |= TIM_CR1_CEN;
 }
 
-void tim_set_duty_cycle(volatile TIM_reg_t *tim, tim_channel_t channel, uint8_t duty_cycle) {
+void tim_oc_set_duty_cycle(volatile TIM_reg_t *tim, tim_channel_t channel, uint8_t duty_cycle) {
     if (duty_cycle > 100) {
         duty_cycle = 100;
     }
@@ -122,6 +122,31 @@ void tim_set_duty_cycle(volatile TIM_reg_t *tim, tim_channel_t channel, uint8_t 
     *ccr = ccr_value;
 }
 
+// Function for input mode
+void tim_ic_init(volatile TIM_reg_t *tim, const tim_ic_config_t *config) {
+    volatile uint32_t *ccmr;
+    uint32_t ccmr_shift, ccer_bit_enable;
+
+    // Determine CCMR register and bit positions based on channel
+    ccmr = (config->channel <= TIM_CH2) ? &tim->CCMR1 : &tim->CCMR2;
+    ccmr_shift = (config->channel == TIM_CH2 || config->channel == TIM_CH4) ? 8 : 0;
+
+    // Calculate CCER bit positions
+
+    // Disable counter during configuration
+    tim->CR1 &= ~TIM_CR1_CEN;
+
+    // Disable the channel before modifying configuration registers (RM0008 rule!)
+}
+uint32_t tim_ic_get_capture(volatile TIM_reg_t *tim, tim_channel_t channel);
+float tim_ic_calculate_frequency(volatile TIM_reg_t *tim, tim_channel_t channel);
+float tim_ic_calculate_period_ms(volatile TIM_reg_t *tim, tim_channel_t channel);
+
+// PWM input mode (for reading RC signals, etc.)
+void tim_ic_pwm_init(volatile TIM_reg_t *tim, tim_channel_t channel);
+float tim_ic_get_duty_cycle(volatile TIM_reg_t *tim);
+uint32_t tim_ic_get_period(volatile TIM_reg_t *tim);
+
 void tim_enable(volatile TIM_reg_t *tim){
     tim->CR1 |= TIM_CR1_CEN;
 }
@@ -131,7 +156,7 @@ void tim_disable(volatile TIM_reg_t *tim){
 }
 
 // PWM configuration: 1kHz, 50% duty cycle on CH1
-const tim_config_t PWM_CH1_1KHZ_50 = {
+const tim_oc_config_t PWM_CH1_1KHZ_50 = {
         .frequency = 1000,
         .duty_cycle = 50,
         .channel = TIM_CH1,
@@ -143,7 +168,7 @@ const tim_config_t PWM_CH1_1KHZ_50 = {
 };
 
 // CH2: LED2 fading out (opposite phase)
-const tim_config_t PWM_CH2_1KHZ_50 = {
+const tim_oc_config_t PWM_CH2_1KHZ_50 = {
         .frequency = 1000,
         .duty_cycle = 50,
         .channel = TIM_CH2,          // ← Channel 2!
@@ -155,7 +180,7 @@ const tim_config_t PWM_CH2_1KHZ_50 = {
 };
 
 // ADC Trigger
-const tim_config_t TIM1_ADC_TRIG_1KHz = {
+const tim_oc_config_t TIM1_ADC_TRIG_1KHz = {
     .frequency = 1000,                                          // 1kHz ADC sampling rate
     .duty_cycle = 50,                                           // Trigger at 50% of period
     .channel = TIM_CH1,                                         // CC1 → ADC EXTSEL
