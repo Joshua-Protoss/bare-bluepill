@@ -265,6 +265,7 @@ uint32_t rcc_get_sysclk_freq(void);
 uint32_t rcc_get_ahb_freq(void);
 uint32_t rcc_get_apb1_freq(void);
 uint32_t rcc_get_apb2_freq(void);
+uint32_t rcc_get_apb1_timer_freq(void);
 
 extern const rcc_clock_config_t RCC_CLOCK_HSI_8MHZ;
 extern const rcc_clock_config_t RCC_CLOCK_HSE_8MHZ;

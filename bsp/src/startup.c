@@ -20,6 +20,7 @@ void dma1_channel4_isr(void);
 void dma1_channel5_isr(void);
 void dma1_channel6_isr(void);
 void dma1_channel7_isr(void);
+void timer3_isr(void);
 void usart1_isr(void);
 void usart2_isr(void);
 void usart3_isr(void);
@@ -46,6 +47,7 @@ vector_table_t vector_table = {
         [NVIC_DMA1_CHANNEL5_IRQ] = dma1_channel5_isr,           // DMA1 Channel5 = IRQ 15 USART1_RX
         [NVIC_DMA1_CHANNEL6_IRQ] = dma1_channel6_isr,           // DMA1 Channel6 = IRQ 16 USART2_RX 
         [NVIC_DMA1_CHANNEL7_IRQ] = dma1_channel7_isr,           // DMA1 Channel7 = IRQ 17 USART2_TX
+        [NVIC_TIM3_IRQ] = timer3_isr,
         [NVIC_USART1_IRQ] = usart1_isr,                         // USART1 = IRQ 37
         [NVIC_USART2_IRQ] = usart2_isr,                         // USART2 = IRQ 38
         [NVIC_USART3_IRQ] = usart3_isr,                         // USART3 = IRQ 39
@@ -99,6 +101,7 @@ void dma1_channel4_isr(void) __attribute__((weak, used, alias("default_handler")
 void dma1_channel5_isr(void) __attribute__((weak, used, alias("default_handler")));
 void dma1_channel6_isr(void) __attribute__((weak, used, alias("default_handler")));
 void dma1_channel7_isr(void) __attribute__((weak, used, alias("default_handler")));
+void timer3_isr(void) __attribute__((weak, used, alias("default_handler")));
 void usart1_isr(void) __attribute__((weak, used, alias("default_handler")));
 void usart2_isr(void) __attribute__((weak, used, alias("default_handler")));
 void usart3_isr(void) __attribute__((weak, used, alias("default_handler")));

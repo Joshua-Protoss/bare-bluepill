@@ -231,3 +231,16 @@ uint32_t rcc_get_apb2_freq(void){
 void rcc_clock_reset_to_default(void){
     rcc_clock_configure(&RCC_CLOCK_HSI_8MHZ);
 }
+
+uint32_t rcc_get_apb1_timer_freq(void) {
+    uint32_t apb1_freq = rcc_get_apb1_freq();
+    uint32_t apb1_presc = (RCC->CFGR >> 8) & 0x07;
+
+    // STM32F103 rule: If APB prescaler = 1, timer clock = APB clock
+    //                 If APB prescaler > 1, timer clock = 2 × APB clock
+    if (apb1_presc == 0) {
+        return apb1_freq;                           // HCLK not divided
+    } else {
+        return apb1_freq * 2;                       // Timer gets 2x APB clock
+    }
+}

@@ -217,6 +217,12 @@ typedef enum {
 // ===== BDTR Bits =====
 #define TIM_BDTR_MOE                            BIT(15)
 
+typedef struct {
+    volatile uint32_t period;                               // Latest period measurement
+    volatile uint32_t duty;                                 // Latest duty measurement  
+    volatile bool new_data;                                 // Flag: new measurement ready
+} tim_pwm_capture_t;
+
 // Timer channels
 typedef enum {
     TIM_CH1 = 0,
@@ -276,7 +282,6 @@ typedef struct {
 
 // Input capture configuration struct
 typedef struct {
-    uint32_t timer_clock_hz;                                              // Timer base clock
     tim_channel_t channel;                                                // Which channel
     tim_ic_mode_t ic_mode;                                                // Capture mode
     tim_ic_polarity_t edge;                                               // Which edge to capture
@@ -292,18 +297,22 @@ void tim_enable(volatile TIM_reg_t *tim);
 void tim_disable(volatile TIM_reg_t *tim);
 
 // Function prototypes for input mode
-void tim_ic_init(volatile TIM_reg_t *tim, const tim_ic_config_t *config);
+void tim_ic_init(volatile TIM_reg_t *tim, const tim_ic_config_t *config, uint32_t tim_clock_hz);
 uint32_t tim_ic_get_capture(volatile TIM_reg_t *tim, tim_channel_t channel);
 float tim_ic_calculate_frequency(volatile TIM_reg_t *tim, tim_channel_t channel);
 float tim_ic_calculate_period_ms(volatile TIM_reg_t *tim, tim_channel_t channel);
 
 // PWM input mode (for reading RC signals, etc.)
-void tim_ic_pwm_init(volatile TIM_reg_t *tim, tim_channel_t channel);
 float tim_ic_get_duty_cycle(volatile TIM_reg_t *tim);
 uint32_t tim_ic_get_period(volatile TIM_reg_t *tim);
+tim_pwm_capture_t* tim_ic_get_pwm_capture(void);
+bool tim_ic_is_new_data_ready(void);
+void tim_ic_clear_new_data(void);
 
 extern const tim_oc_config_t PWM_CH1_1KHZ_50;
 extern const tim_oc_config_t PWM_CH2_1KHZ_50;
 extern const tim_oc_config_t TIM1_ADC_TRIG_1KHz;
+extern const tim_oc_config_t PWM_CH1_1KHZ_30;
+extern const tim_ic_config_t INPUT_CAPTURE_RISING_44MHZ;
 
 #endif // INC_TIMERS_H

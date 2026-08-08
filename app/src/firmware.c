@@ -5,47 +5,61 @@
 #include <string.h>
 #include "usart.h"
 #include "timers.h"
-#include "adc.h"
-#include "watchdog.h"
+#include "nvic.h"
 
-#define ENABLE_WWDG                     1
 #define SYSTICK_FREQ                    (1000)            // the desired systick frequency, 1000Hz means 1ms per tick  
-#define ADC_PORT                        (PORT_GPIOA)      // this is an external LED connected to PA0
-#define ADC_PIN                         (PIN_GPIO1)
-#define USART_TX_PIN                    (PIN_GPIO9)
-#define USART_RX_PIN                    (PIN_GPIO10)
+#define USART_PORT                      (RCC_GPIOA)
+#define USART_TX_PIN                    (PIN_GPIO9)       // PA9
+#define USART_RX_PIN                    (PIN_GPIO10)      // PA10
+
+// Test: Generate PWM on TIM2 CH1 (PA0), read it with TIM3 CH1 (PA6)
+// Connect PA0 to PA6 with a jumper wire!
 
 volatile uint32_t systick_ticks = 0;
-volatile uint32_t adc_sample_count = 0;
-
-// DMA buffer for 2 channels
-static volatile bool dma_transfer_complete = false;
 
 // Pre-defined messages as uint8_t arrays
-static const uint8_t msg_welcome[] = "ADC DMA Scan Terminal\r\n";
+static const uint8_t msg_welcome[] = "Input Capture Terminal\r\n";
 static const uint8_t msg_prompt[] = "\r\n>";
 
 void systick_handler(void){
     systick_ticks++;
 }
 
-void dma1_channel1_isr(void){
-    if (DMA1_Controller->ISR & DMA_ISR_TCIF(1)) {
-        DMA1_Controller->IFCR = DMA_IFCR_CTCIF(1);
-        dma_transfer_complete = true;
-    
-        // Toggle LED every 100 DMA transfers
-        static uint32_t toggle_count = 0;
-        if (++toggle_count >= 500) {
-            toggle_count = 0;
-            gpio_toggle_pin(PORT_GPIOC, PIN_GPIO13);
-        }
-    }
+void timer3_isr(void) {
+    static uint32_t last_ccr1 = 0;
+    static bool first_capture = true;
 
+    if (TIM3->SR & TIM_SR_CC1IF) {
+        // CH1 captured a rising edge → new complete PWM cycle measured!
+        // Read BOTH registers NOW (they're from the same cycle)
+        uint32_t current_ccr1  = TIM3->CCR1;
+        uint32_t current_ccr2 = TIM3->CCR2;
+
+        if (!first_capture) {
+            // Calculate period as difference between consecutive rising edges
+            uint32_t period;
+            if (current_ccr1 >= last_ccr1) {
+                period = current_ccr1 - last_ccr1;
+            } else {
+                // Counter wrapped around
+                period = (0xFFFF - last_ccr1) + current_ccr1 + 1;
+            }
+            // Store safely
+            tim_pwm_capture_t *cap = tim_ic_get_pwm_capture();
+            cap->period = period;
+            cap->duty = current_ccr2;
+            cap->new_data = true;
+        }
+
+        last_ccr1 = current_ccr1;
+        first_capture = false;
+        // Clear interrupt flag
+        TIM3->SR &= ~TIM_SR_CC1IF;                       // Write 0 to clear
+    }
 }
 
 void uart_setup(){
-    rcc_periph_clock_enable(RCC_GPIOA);
+    rcc_periph_clock_enable(USART_PORT);
     rcc_periph_clock_enable(RCC_USART1);
     // PA9 = TX (AF push-pull)
     gpio_set_mode(PORT_GPIOA, USART_TX_PIN, GPIO_MODE_OUTPUT_50MHZ, GPIO_CNF_OUTPUT_AF_PUSHPULL);
@@ -59,53 +73,29 @@ void uart_setup(){
     usart_write(USART1, msg_welcome, sizeof(msg_welcome)-1);
     usart_write(USART1, msg_prompt, sizeof(msg_prompt)-1);
     usart_printf(USART1, "SysClk: %lu Hz\r\n", rcc_get_sysclk_freq());
-    usart_printf(USART1, "DMA Scan: CH1 (PA1) + CH16 (Temp)\r\n");
     usart_printf(USART1, "APB2: %lu Hz\r\n", rcc_get_apb2_freq());
 }
 
-void adc_setup(){
-    // Configure PA0 as analog input
-    rcc_periph_clock_enable(RCC_GPIOA);
-    gpio_set_mode(ADC_PORT, ADC_PIN, GPIO_MODE_INPUT, GPIO_CNF_INPUT_ANALOG);
+void input_capture_test(void) {
+    rcc_periph_clock_enable(RCC_TIM2);  // GPIO port A should be activated in uart_setup()
+    rcc_periph_clock_enable(RCC_TIM3);  // make sure uart_setup() is called first
 
-    // Configure Timer1 as output compare
-    rcc_periph_clock_enable(RCC_TIM1);
-    tim_oc_init(TIM1, &TIM1_ADC_TRIG_1KHz, rcc_get_apb2_freq());               // 44MHz (APB2_DIV_1)
-    
-    adc_injected_init(ADC1, &ADC_INJECT_TEST);
+    // PA0 = TIM2_CH1 output (generate PWM)
+    gpio_set_mode(PORT_GPIOA, PIN_GPIO0, GPIO_MODE_OUTPUT_50MHZ, GPIO_CNF_OUTPUT_AF_PUSHPULL);
 
-    volatile uint32_t jsqr = ADC1->JSQR;
-    volatile uint32_t channel_seq = ADC_INJECT_TEST.channels[0];
-    volatile uint32_t channel_seq2 = ADC_INJECT_TEST.channels[1];
-    volatile uint32_t cr1 = ADC1->CR1;
-    volatile uint32_t cr2 = ADC1->CR2;
-    volatile uint32_t sr  = ADC1->SR;
-    volatile uint32_t sqr3 = ADC1->SQR3;
-    volatile uint32_t cfgr = RCC->CFGR;
-    volatile uint32_t smpr2 = ADC1->SMPR2;
-    volatile uint32_t smpr1 = ADC1->SMPR1;
-    usart_printf(USART1, "JSQR: 0x%08lX\r\n", jsqr);
-    usart_printf(USART1, "channel_seq: %d\r\n", channel_seq);
-    usart_printf(USART1, "channel_seq2: %d\r\n", channel_seq2);
-    usart_printf(USART1, "CR1: 0x%08lX\r\n", cr1);
-    usart_printf(USART1, "CR2: 0x%08lX\r\n", cr2);
-    usart_printf(USART1, "SR:  0x%08lX\r\n", sr);
-    usart_printf(USART1, "SQR3: 0x%08lX\r\n", sqr3);
-    usart_printf(USART1, "RCC_CFGR: 0x%08lX\r\n", cfgr);
-    usart_printf(USART1, "SMPR2: 0x%08lX\r\n", smpr2);
-    usart_printf(USART1, "SMPR1: 0x%08lX\r\n", smpr1);
+    // PA6 = TIM3_CH1 input (read PWM)
+    gpio_set_mode(PORT_GPIOA, PIN_GPIO6, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOATING);
 
-    volatile uint32_t crl = PORT_GPIOA->CRL;
-    usart_printf(USART1, "GPIOA_CRL: 0x%08lX\r\n", crl);
-}
+    uint32_t apb1_timer_clk = rcc_get_apb1_timer_freq();  // Should be 44 MHz
 
-void wwdg_isr(void) {
-    // Check if the Early Wakeup Interrupt flag is set
-    if (WWDG->SR & WWDG_SR_EWIF) {
-        // Clear the flag by writing 0 (per reference manual)
-        gpio_toggle_pin(PORT_GPIOC, PIN_GPIO13);   // LED toggle
-        WWDG->SR &= ~WWDG_SR_EWIF;              // Clear flag
-    }
+    // Generate 1kHz PWM with 30% duty cycle
+    tim_oc_init(TIM2, &PWM_CH1_1KHZ_30, rcc_get_apb1_timer_freq());
+
+    // Configure TIM3 CH1 to read PWM in PWM input mode
+    tim_ic_init(TIM3, &INPUT_CAPTURE_RISING_44MHZ, apb1_timer_clk);
+
+    // enable nvic
+    nvic_enable_irq(NVIC_TIM3_IRQ);
 }
 
 int main(void) {
@@ -114,55 +104,26 @@ int main(void) {
     rcc_periph_clock_enable(RCC_GPIOC);
     gpio_set_mode(PORT_GPIOC, PIN_GPIO13, GPIO_MODE_OUTPUT_50MHZ, GPIO_CNF_OUTPUT_PUSHPULL);
     uart_setup();
-    adc_setup();
+    input_capture_test();
 
-    // Check if we recovered from a fault
-    if (RCC->CSR & RCC_CSR_WWDGRSTF) {
-        RCC->CSR |= RCC_CSR_RMVF;               // Clear reset flags
-
-        // Blink LED slowly to show WWDG caught a violation
-        for (uint8_t i = 0; i < 3; i++) {
-            gpio_toggle_pin(PORT_GPIOC, PIN_GPIO13);
-            systick_delay_ms(200);
-        }
-    }
-    
-    #if ENABLE_WWDG 
-        wwdg_init(WWDG_PRESCALER_8, 127, 80);  // ~1.49 ms per tick, (127-63)*1.49 ~= 95.36ms
-        wwdg_enable_ewi();
-        usart_printf(USART1, "WWDG Configured Successfully. Window open between 55.1ms and 95.3ms.\r\n\r\n");
-    #endif
-
-    uint32_t last_execution_time = systick_ticks;
+    usart_printf(USART1, "APB1 Timer Clock: %lu Hz\r\n", rcc_get_apb1_timer_freq());
+    usart_printf(USART1, "Expected PWM period: %lu ticks @ 1kHz\r\n", rcc_get_apb1_timer_freq() / 1000);
 
     while(1){
-        // Measure real elapsed time using Systick
-        uint32_t current_time = systick_ticks;
+        if (tim_ic_is_new_data_ready()) {
+            tim_ic_clear_new_data();
 
-        // Execute printing and ADC math exactly every 71 milliseconds, window -> (120-80)*1.49 ms ~= 70ms
-        // 71ms is safely inside 70ms - 95.3ms execution window
-        if ((current_time - last_execution_time) >= 71) {
-            last_execution_time += 71;          // Prevents drift caused by loop execution time, better than = current time
+            tim_pwm_capture_t *cap = tim_ic_get_pwm_capture();
+            uint32_t period = cap->period;
+            uint32_t duty = cap->duty;
 
-            // Read WWDG counter for display
-            uint8_t wwdg_cnt = WWDG->CR & 0x7F;
-            // Print loop info (takes ~2ms)
-            usart_printf(USART1, "WWDG=%d ", wwdg_cnt);
-
-            uint16_t inj_results[2];
-            adc_injected_read(ADC1, inj_results, 2);
-            uint16_t ch1_raw = inj_results[0];                       // Potentiometer
-            uint16_t ch16_raw = inj_results[1];                      // Temperature
-            uint32_t ch1_mv = (ch1_raw * 3300) / 4096;
-            int32_t temp = convert_internal_temp(ch16_raw);
-
-            usart_printf(USART1, "CH1: %lu mv (%u) | Temp: %ld.%02ld C (%u)\r\n",
-                        ch1_mv, ch1_raw, temp / 100, temp % 100, ch16_raw);
-            
-            wwdg_kick(127);
-
+            if (period > 0 && period < 100000) {
+                float duty_pct = ((float)duty / (float)period) * 100.0f;
+                float freq = (float)rcc_get_apb1_timer_freq() / (float)period;
+                usart_printf(USART1, "Period: %lu ticks, Duty: %.1f%%, Freq: %.1fHz \r\n", period, duty_pct, freq);
+            }
         }
-        // CPU free to do background task
+       // __asm__("wfi");  // Sleep, save power!
     }
 
     return 0;
