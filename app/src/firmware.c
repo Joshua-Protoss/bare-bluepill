@@ -26,36 +26,46 @@ void systick_handler(void){
 }
 
 void timer3_isr(void) {
-    static uint32_t last_ccr1 = 0;
-    static bool first_capture = true;
+    static uint32_t last_rising = 0;
+    static uint32_t period = 0;
+    static bool measuring_duty = false;             // false = waiting for rising, true = waiting for falling
 
     if (TIM3->SR & TIM_SR_CC1IF) {
-        // CH1 captured a rising edge → new complete PWM cycle measured!
-        // Read BOTH registers NOW (they're from the same cycle)
-        uint32_t current_ccr1  = TIM3->CCR1;
-        uint32_t current_ccr2 = TIM3->CCR2;
+        uint32_t capture = TIM3->CCR1;
 
-        if (!first_capture) {
-            // Calculate period as difference between consecutive rising edges
-            uint32_t period;
-            if (current_ccr1 >= last_ccr1) {
-                period = current_ccr1 - last_ccr1;
+        if (!measuring_duty) {
+             // === RISING EDGE CAPTURED ===
+             if (capture >= last_rising) {
+                period = capture - last_rising;
+             } else {
+                period = (0xFFFF - last_rising) + capture + 1;
+             }
+
+            last_rising = capture;
+            // Now switch to falling edge to measure duty
+            TIM3->CCER |= TIM_CCER_CC1P;                // Set CC1P=1 → falling edge
+            measuring_duty = true;
+        } else {
+            // === FALLING EDGE CAPTURED ===
+            uint32_t duty_ticks;
+            if (capture >= last_rising) {
+                duty_ticks = capture - last_rising;
             } else {
-                // Counter wrapped around
-                period = (0xFFFF - last_ccr1) + current_ccr1 + 1;
+                duty_ticks = (0xFFFF - last_rising) + capture + 1;
             }
-            // Store safely
+
+            // Store the measurements
             tim_pwm_capture_t *cap = tim_ic_get_pwm_capture();
             cap->period = period;
-            cap->duty = current_ccr2;
+            cap->duty = duty_ticks;
             cap->new_data = true;
-        }
 
-        last_ccr1 = current_ccr1;
-        first_capture = false;
-        // Clear interrupt flag
-        TIM3->SR &= ~TIM_SR_CC1IF;                       // Write 0 to clear
-    }
+            // Switch back to rising edge for next cycle
+            TIM3->CCER &= ~TIM_CCER_CC1P;               // Set CC1P=0 → rising edge
+            measuring_duty = false;
+        }
+        TIM3->SR &= ~TIM_SR_CC1IF;  
+    } 
 }
 
 void uart_setup(){
@@ -77,23 +87,20 @@ void uart_setup(){
 }
 
 void input_capture_test(void) {
-    rcc_periph_clock_enable(RCC_TIM2);  // GPIO port A should be activated in uart_setup()
-    rcc_periph_clock_enable(RCC_TIM3);  // make sure uart_setup() is called first
+    rcc_periph_clock_enable(RCC_TIM2);              // GPIO port A should be activated in uart_setup()
+    rcc_periph_clock_enable(RCC_TIM3);              // make sure uart_setup() is called first
 
     // PA0 = TIM2_CH1 output (generate PWM)
     gpio_set_mode(PORT_GPIOA, PIN_GPIO0, GPIO_MODE_OUTPUT_50MHZ, GPIO_CNF_OUTPUT_AF_PUSHPULL);
-
     // PA6 = TIM3_CH1 input (read PWM)
     gpio_set_mode(PORT_GPIOA, PIN_GPIO6, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOATING);
 
     uint32_t apb1_timer_clk = rcc_get_apb1_timer_freq();  // Should be 44 MHz
 
     // Generate 1kHz PWM with 30% duty cycle
-    tim_oc_init(TIM2, &PWM_CH1_1KHZ_30, rcc_get_apb1_timer_freq());
-
+    tim_oc_init(TIM2, &PWM_CH1_1KHZ_30, apb1_timer_clk);
     // Configure TIM3 CH1 to read PWM in PWM input mode
     tim_ic_init(TIM3, &INPUT_CAPTURE_RISING_44MHZ, apb1_timer_clk);
-
     // enable nvic
     nvic_enable_irq(NVIC_TIM3_IRQ);
 }
@@ -123,7 +130,7 @@ int main(void) {
                 usart_printf(USART1, "Period: %lu ticks, Duty: %.1f%%, Freq: %.1fHz \r\n", period, duty_pct, freq);
             }
         }
-       // __asm__("wfi");  // Sleep, save power!
+       //__asm__("wfi");  // Sleep, save power!
     }
 
     return 0;
