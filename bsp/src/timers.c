@@ -1,6 +1,5 @@
 #include "timers.h"
 
-static uint32_t tim_ic_clocks[14] = {0};            // One per timer instance
 static tim_pwm_capture_t pwm_capture_data = {0};
 
 // Helper: Get CCR register for channel
@@ -107,7 +106,6 @@ void tim_oc_init(volatile TIM_reg_t *tim, const tim_oc_config_t *config, uint32_
     if (tim == TIM1 || tim == TIM8){
         tim->BDTR |= TIM_BDTR_MOE;
     }
-
     // Enable counter
     tim->CR1 |= TIM_CR1_CEN;
 }
@@ -127,10 +125,7 @@ void tim_oc_set_duty_cycle(volatile TIM_reg_t *tim, tim_channel_t channel, uint8
 
 // Function for input mode
 void tim_ic_init(volatile TIM_reg_t *tim, const tim_ic_config_t *config, uint32_t tim_clock_hz) {
-    // Determine timer index and store clock
-    uint32_t tim_index = ((uint32_t)tim - TIM2_BASE) / 0x400;
-    tim_ic_clocks[tim_index % 14] = tim_clock_hz;
-
+    pwm_capture_data.timer_clock_hz = tim_clock_hz;                        // Store clock in the capture data struct
     volatile uint32_t *ccmr;
     uint32_t ccmr_shift, cce_bit, ccp_bit;
 
@@ -138,7 +133,7 @@ void tim_ic_init(volatile TIM_reg_t *tim, const tim_ic_config_t *config, uint32_
     ccmr = (config->channel <= TIM_CH2) ? &tim->CCMR1 : &tim->CCMR2;
     ccmr_shift = (config->channel == TIM_CH2 || config->channel == TIM_CH4) ? 8 : 0;
 
-    // Calculate CCER bit positions
+    // Calculate CCER bit positions for enable and polarity bits
     cce_bit = BIT(config->channel * 4);                                     // CC1E=bit0, CC2E=bit4, CC3E=bit8, CC4E=bit12
     ccp_bit = BIT((config->channel * 4) + 1);                               // CC1P=bit1, CC2P=bit5, CC3P=bit9, CC4P=bit13
 
@@ -146,105 +141,51 @@ void tim_ic_init(volatile TIM_reg_t *tim, const tim_ic_config_t *config, uint32_
     tim->CCER &= ~(cce_bit);
     tim->CR1 &= ~TIM_CR1_CEN;
 
+    // Apply CR1 settings
+    tim->CR1 &= ~(TIM_CR1_CKD_MASK | TIM_CR1_CMS_MASK | TIM_CR1_DIR | TIM_CR1_ARPE);
+    tim->CR1 |= config->clock_div | TIM_CR1_ARPE;
+
     // Clear the entire 8-bit slot for this channel in the CCMR register
     *ccmr &= ~(0xFFU << ccmr_shift);                                        // This safely clears CCxS, ICxPSC, and ICxF all at once.   
     
-    // Handle PWM input mode specially
-    if (config->ic_mode == TIM_IC_MODE_PWM_INPUT) {                         // PWM input only works on CH1 or CH3 (the first channel of the pair)
-        if (config->channel != TIM_CH1 && config->channel != TIM_CH3) {     // Validate channel selection
-            return;
-        }
-        if (config->channel == TIM_CH1) {
-            // ===== CH1 Configuration (Primary - measures period) =====
-            uint32_t ch1_ccmr = TIM_CCMRx_CCxS_INPUT_TI1;                   // CC1S = 01: CH1 mapped to TI1 (direct input)
-            ch1_ccmr |= config->prescaler | config->filter;
-            tim->CCMR1 &= ~0xFFU;                                           // Clear CH1 slot
-            tim->CCMR1 |= ch1_ccmr;
-
-            // ===== CH2 Configuration (Secondary - measures duty) =====
-            uint32_t ch2_ccmr = TIM_CCMRx_CCxS_INPUT_TI2;                   // CC2S = 10: CH2 mapped to TI1 (cross-mapped)
-            ch2_ccmr |= config->prescaler | config->filter;
-            tim->CCMR1 &= ~(0xFFU << 8);                                    // Clear CH2 slot
-            tim->CCMR1 |= (ch2_ccmr << 8);
-
-            // ===== Edge Polarity Configuration =====
-            tim->CCER &= ~(TIM_CCER_CC1P | TIM_CCER_CC2P);                  // CH1 captures RISING edge (CC1P = 0)
-            tim->CCER |= TIM_CCER_CC2P;                                     // CH2 captures FALLING edge (CC2P = 1)
-            tim->CCER |= TIM_CCER_CC1E | TIM_CCER_CC2E;                     // Enable BOTH channels
-
-            // Enable interrupts if requested
-            if (config->enable_interrupt) {
-                tim->DIER |= TIM_DIER_CC1IE;                                // Only need CH1 interrupt
-            }
-            
-        } else if (config->channel == TIM_CH3) {
-            // ===== CH3 Configuration (Primary - measures period) =====
-            uint32_t ch3_ccmr = TIM_CCMRx_CCxS_INPUT_TI1;                   // CH3 mapped to TI3 (direct)
-            ch3_ccmr |= config->prescaler | config->filter;
-            tim->CCMR2 &= ~0xFFU;                                           // Clear CH3 slot
-            tim->CCMR2 |= ch3_ccmr;
-
-            // ===== CH4 Configuration (Secondary - measures duty) =====
-            uint32_t ch4_ccmr = TIM_CCMRx_CCxS_INPUT_TI2;                   // CC2S = 10: CH4 mapped to TI1 (cross-mapped)
-            ch4_ccmr |= config->prescaler | config->filter;
-            tim->CCMR2 &= ~(0xFFU << 8);                                    // Clear CH4 slot
-            tim->CCMR2 |= (ch4_ccmr << 8);
-
-            // ===== Edge Polarity Configuration =====
-            tim->CCER &= ~(TIM_CCER_CC3P | TIM_CCER_CC4P);                  // CH3 captures RISING edge (CC3P = 0)
-            tim->CCER |= TIM_CCER_CC4P;                                     // CH4 captures FALLING edge (CC2P = 1)
-            tim->CCER |= TIM_CCER_CC3E | TIM_CCER_CC4E;                     // Enable BOTH channels
-
-            if (config->enable_interrupt) {
-                tim->DIER |= TIM_DIER_CC3IE;                                // Only need CH3 interrupt
-            }
-        }
+    // ===== Standard Input Capture (Direct or Indirect) =====
+    // Map the input routing (CCxS bits)
+    uint32_t ccxs_val = 0;
+    switch (config->ic_mode) {
+        case TIM_IC_MODE_DIRECT:                                        // Channel 1->TI1, Ch 2->TI2, Ch 3->TI3, Ch 4->TI4
+            ccxs_val = TIM_CCMRx_CCxS_INPUT_TI1;
+            break;
+        case TIM_IC_MODE_INDIRECT:                                      // Cross-mapped (Ch 1->TI2, Ch 2->TI1, etc.)
+            ccxs_val = TIM_CCMRx_CCxS_INPUT_TI2;
+            break;
+        default:
+            ccxs_val = TIM_CCMRx_CCxS_INPUT_TI1;
+            break;
+    }
+    // Combine and apply CCxS, Prescaler, and Filter
+    uint32_t ccmr_val = (ccxs_val | config->prescaler | config->filter) << ccmr_shift;
+    *ccmr = ccmr_val;
+    // Configure edge detection in CCER
+    if (config->edge == TIM_IC_EDGE_FALLING) {
+        tim->CCER |= ccp_bit;                                           // 1 = Falling edge active
     } else {
-        // ===== Standard Input Capture (Direct or Indirect) =====
-        // Map the input routing (CCxS bits)
-        uint32_t ccxs_val = 0;
-        switch (config->ic_mode) {
-            case TIM_IC_MODE_DIRECT:                                        // Channel 1->TI1, Ch 2->TI2, Ch 3->TI3, Ch 4->TI4
-                ccxs_val = TIM_CCMRx_CCxS_INPUT_TI1;
-                break;
-            case TIM_IC_MODE_INDIRECT:                                      // Cross-mapped (Ch 1->TI2, Ch 2->TI1, etc.)
-                ccxs_val = TIM_CCMRx_CCxS_INPUT_TI2;
-                break;
-            default:
-                ccxs_val = TIM_CCMRx_CCxS_INPUT_TI1;
-                break;
-        }
-
-        // Combine and apply CCxS, Prescaler, and Filter
-        uint32_t ccmr_val = (ccxs_val | config->prescaler | config->filter) << ccmr_shift;
-        *ccmr = ccmr_val;
-
-        // Configure edge detection in CCER
-        if (config->edge == TIM_IC_EDGE_FALLING) {
-            tim->CCER |= ccp_bit;                                           // 1 = Falling edge active
-        } else {
-            tim->CCER &= ~ccp_bit;                                          // 0 = Rising edge active (Default / fallback for BOTH)
-        }
-
-        tim->CCER |= cce_bit;                                               // Enable the channel
-
-        // Configure Interrupts in DIER
-        if (config->enable_interrupt) {
-            switch (config->channel) {
-                case TIM_CH1: tim->DIER |= TIM_DIER_CC1IE; break;
-                case TIM_CH2: tim->DIER |= TIM_DIER_CC2IE; break;
-                case TIM_CH3: tim->DIER |= TIM_DIER_CC3IE; break;
-                case TIM_CH4: tim->DIER |= TIM_DIER_CC4IE; break;
-            }
+        tim->CCER &= ~ccp_bit;                                          // 0 = Rising edge active (Default / fallback for BOTH)
+    }
+    tim->CCER |= cce_bit;                                               // Enable the channel
+    // Configure Interrupts in DIER
+    if (config->enable_interrupt) {
+        switch (config->channel) {
+            case TIM_CH1: tim->DIER |= TIM_DIER_CC1IE; break;
+            case TIM_CH2: tim->DIER |= TIM_DIER_CC2IE; break;
+            case TIM_CH3: tim->DIER |= TIM_DIER_CC3IE; break;
+            case TIM_CH4: tim->DIER |= TIM_DIER_CC4IE; break;
         }
     }
     
     // Set prescaler to 0 (timer counts at full speed for capture)
     tim->PSC = 0;
-
-    // Set ARR to max (don't limit the counter)
+    // Set ARR to max 
     tim->ARR = 0xFFFF;
-
     // Re-enable the counter
     tim->CR1 |= TIM_CR1_CEN;
 }
@@ -268,28 +209,14 @@ float tim_ic_calculate_frequency(volatile TIM_reg_t *tim, tim_channel_t channel)
     last_capture[channel] = current;
     if (period == 0) return 0.0f;
 
-    uint32_t tim_index = ((uint32_t)tim - TIM2_BASE) / 0x400; 
-    float timer_clock = (float) tim_ic_clocks[tim_index % 14];
-    if (timer_clock == 0.0f) timer_clock = 44000000.0f;                 // system clock = 44 MHz
-    return timer_clock / (float)period;                             // Need timer clock info
+    tim_pwm_capture_t *cap = tim_ic_get_pwm_capture();
+    return (float)cap->timer_clock_hz / (float)period;
 }
 
 float tim_ic_calculate_period_ms(volatile TIM_reg_t *tim, tim_channel_t channel) {
     float freq = tim_ic_calculate_frequency(tim, channel);
     if (freq == 0.0f) return 0.0f;
     return 1000.0f / freq;
-}
-
-// PWM input mode (for reading RC signals, etc.)
-float tim_ic_get_duty_cycle(volatile TIM_reg_t *tim) {
-    uint32_t period = tim->CCR1;
-    uint32_t duty = tim->CCR2;
-    if (period == 0) return 0.0f;
-    return ((float)duty / (float)period) * 100.0f;
-}
-
-uint32_t tim_ic_get_period(volatile TIM_reg_t *tim) {
-    return tim->CCR1;
 }
 
 tim_pwm_capture_t* tim_ic_get_pwm_capture(void) {
@@ -362,12 +289,13 @@ const tim_oc_config_t PWM_CH1_1KHZ_30 = {
     .direction = TIM_DIR_UP,
 };
 
-// Configure TIM3 CH1 to read PWM in PWM input mode
+// Configure TIM3 CH1 to read PWM in standard input mode
 const tim_ic_config_t INPUT_CAPTURE_RISING_44MHZ = {
     .channel = TIM_CH1,
     .ic_mode = TIM_IC_MODE_DIRECT,
     .edge = TIM_IC_EDGE_RISING,
     .prescaler = TIM_IC_PSC_DIV1,
     .filter = TIM_IC_FILTER_NONE,
+    .clock_div = TIM_CKD_DIV1,
     .enable_interrupt = true,
 };

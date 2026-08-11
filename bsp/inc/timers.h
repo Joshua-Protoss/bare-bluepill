@@ -110,7 +110,6 @@ typedef enum {
 
 /* --- Channel 2 Multipliers (+8 bit shift from Channel 1) --- */
 #define TIM_CCMR1_CC2S_SHIFT                    (8)
-
 #define TIM_CCMR2_CC3S_SHIFT                    (0)
 #define TIM_CCMR2_CC4S_SHIFT                    (8)
 
@@ -153,7 +152,6 @@ typedef enum {
 typedef enum {
     TIM_IC_MODE_DIRECT,                                      // Direct input on TIx
     TIM_IC_MODE_INDIRECT,                                    // Indirect (cross-channel)
-    TIM_IC_MODE_PWM_INPUT,                                   // PWM input mode (special)
 } tim_ic_mode_t;
 
 // ===== CCER Bits =====
@@ -221,6 +219,7 @@ typedef struct {
     volatile uint32_t period;                               // Latest period measurement
     volatile uint32_t duty;                                 // Latest duty measurement  
     volatile bool new_data;                                 // Flag: new measurement ready
+    uint32_t timer_clock_hz;                                // Clock frequency for this capture
 } tim_pwm_capture_t;
 
 // Timer channels
@@ -237,11 +236,11 @@ typedef enum {
     TIM_MODE_ONE_PULSE,                                                 // One-pulse mode
 } tim_op_mode_t;
 
-typedef enum {
-    TIM_CKD_DIV1 = (0x00 << 8),                                         // tDTS = tCK_INT
-    TIM_CKD_DIV2 = (0x01 << 8),                                         // tDTS = 2 × tCK_INT
-    TIM_CKD_DIV4 = (0x02 << 8),                                         // tDTS = 4 × tCK_INT
-} tim_ckd_t;
+typedef enum {                                                          // multiply the period (divide the frequency)
+    TIM_CKD_DIV1 = (0x00 << 8),                                         // tDTS = tCK_INT     (equal)
+    TIM_CKD_DIV2 = (0x01 << 8),                                         // tDTS = 2 * tCK_INT (half frequency)
+    TIM_CKD_DIV4 = (0x02 << 8),                                         // tDTS = 4 * tCK_INT (quarter frequency)
+} tim_ckd_t;                                                            // Timer deat time is unrelated with ADC dead time (DTS)
 
 typedef enum {
     TIM_CMS_EDGE    = (0x00 << 5),                                      // Edge-aligned
@@ -287,6 +286,7 @@ typedef struct {
     tim_ic_polarity_t edge;                                               // Which edge to capture
     tim_ic_prescaler_t prescaler;                                         // Event prescaler
     tim_ic_filter_t filter;                                               // Input filter
+    tim_ckd_t clock_div;
     bool enable_interrupt;                                                // Enable CC interrupt
 } tim_ic_config_t;
 
@@ -298,16 +298,14 @@ void tim_disable(volatile TIM_reg_t *tim);
 
 // Function prototypes for input mode
 void tim_ic_init(volatile TIM_reg_t *tim, const tim_ic_config_t *config, uint32_t tim_clock_hz);
-uint32_t tim_ic_get_capture(volatile TIM_reg_t *tim, tim_channel_t channel);
-float tim_ic_calculate_frequency(volatile TIM_reg_t *tim, tim_channel_t channel);
-float tim_ic_calculate_period_ms(volatile TIM_reg_t *tim, tim_channel_t channel);
-
-// PWM input mode (for reading RC signals, etc.)
-float tim_ic_get_duty_cycle(volatile TIM_reg_t *tim);
-uint32_t tim_ic_get_period(volatile TIM_reg_t *tim);
 tim_pwm_capture_t* tim_ic_get_pwm_capture(void);
 bool tim_ic_is_new_data_ready(void);
 void tim_ic_clear_new_data(void);
+
+// Legacy code for testing, implement this in ISR instead
+uint32_t tim_ic_get_capture(volatile TIM_reg_t *tim, tim_channel_t channel);
+float tim_ic_calculate_frequency(volatile TIM_reg_t *tim, tim_channel_t channel);
+float tim_ic_calculate_period_ms(volatile TIM_reg_t *tim, tim_channel_t channel);
 
 extern const tim_oc_config_t PWM_CH1_1KHZ_50;
 extern const tim_oc_config_t PWM_CH2_1KHZ_50;
@@ -316,3 +314,15 @@ extern const tim_oc_config_t PWM_CH1_1KHZ_30;
 extern const tim_ic_config_t INPUT_CAPTURE_RISING_44MHZ;
 
 #endif // INC_TIMERS_H
+
+// System Clock (44 MHz)
+//     ↓
+// APB1 Timer Clock = tCK_INT (22 MHz or 44 MHz depending on prescaler)
+//     ↓ CKD divider
+// tDTS (sampling clock for filters and dead-time)
+//     ↓ IC Filter prescaler
+// Filter sampling clock (fSAMPLING)
+//     ↓ N consecutive samples
+// Validated edge detected
+
+// What's missing : 1. TRC Option : TIM_CCMRx_CCxS_INPUT_TRC 2. DMA

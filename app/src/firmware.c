@@ -111,11 +111,10 @@ int main(void) {
     rcc_periph_clock_enable(RCC_GPIOC);
     gpio_set_mode(PORT_GPIOC, PIN_GPIO13, GPIO_MODE_OUTPUT_50MHZ, GPIO_CNF_OUTPUT_PUSHPULL);
     uart_setup();
-    input_capture_test();
 
     usart_printf(USART1, "APB1 Timer Clock: %lu Hz\r\n", rcc_get_apb1_timer_freq());
     usart_printf(USART1, "Expected PWM period: %lu ticks @ 1kHz\r\n", rcc_get_apb1_timer_freq() / 1000);
-
+    input_capture_test();
     while(1){
         if (tim_ic_is_new_data_ready()) {
             tim_ic_clear_new_data();
@@ -130,7 +129,7 @@ int main(void) {
                 usart_printf(USART1, "Period: %lu ticks, Duty: %.1f%%, Freq: %.1fHz \r\n", period, duty_pct, freq);
             }
         }
-       //__asm__("wfi");  // Sleep, save power!
+       __asm__("wfi");  // Sleep, save power!
     }
 
     return 0;
