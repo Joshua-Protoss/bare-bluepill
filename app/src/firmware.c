@@ -45,21 +45,34 @@ void uart_setup(){
 }
 
 void max30102_i2c_test(void) {
-    uint8_t part_id, rev_id;
+    i2c_bitbang_init(&MAX30102_I2C_CFG);
 
-    // Read part ID
-    if (i2c_read(0x57, 0xFF, &part_id, 1)) {
-        usart_printf(USART1, "Part ID: 0x%02X (expected 0x15)\r\n", part_id);
-        if (part_id == 0x15) {
-            usart_printf(USART1, "I2C working! \r\n");
-        }
+    // Probe the device
+    usart_printf(USART1, "Probing 0x57...");
+    if (i2c_probe(0x57)) {
+        usart_printf(USART1, "Device found!\r\n");
     } else {
-        usart_printf(USART1, "I2C read failed! Check connections. \r\n");
+        usart_printf(USART1, "No response. Check wiring. \r\n");
+        return;
     }
 
-    // Read Revision ID
+    // Read Part ID (register 0xFF)
+    uint8_t part_id;
+    if (i2c_read(0x57, 0xFF, &part_id, 1)) {
+        usart_printf(USART1, "Part ID: 0x%02X ", part_id);
+        if (part_id == 0x15) {
+            usart_printf(USART1, "MAX30102 detected! \r\n");
+        } else {
+            usart_printf(USART1, "Unknown, expected 0x15 \r\n");
+        }
+    } else {
+        usart_printf(USART1, "Failed to read Part ID \r\n");
+    }
+
+    // Read Revision ID (register 0xFE)
+    uint8_t rev_id;
     if (i2c_read(0x57, 0xFE, &rev_id, 1)) {
-        usart_printf(USART1, "Rev ID: 0x%02X\r\n", rev_id);
+        usart_printf(USART1, "Revision ID: 0x%02X\r\n", rev_id);
     }
 }
 
@@ -69,16 +82,16 @@ int main(void) {
     rcc_periph_clock_enable(RCC_GPIOC);
     gpio_set_mode(PORT_GPIOC, PIN_GPIO13, GPIO_MODE_OUTPUT_50MHZ, GPIO_CNF_OUTPUT_PUSHPULL);
     uart_setup();
-
+    
     usart_printf(USART1, "APB1 Timer Clock: %lu Hz\r\n", rcc_get_apb1_timer_freq());
     usart_printf(USART1, "Expected PWM period: %lu ticks @ 1kHz\r\n", rcc_get_apb1_timer_freq() / 1000);
+    max30102_i2c_test();
 
     while(1){
-
+        __asm__("wfi");  // Sleep, save power!
         
-        }
-       __asm__("wfi");  // Sleep, save power!
-    
+    }
+       
 
     return 0;
 }

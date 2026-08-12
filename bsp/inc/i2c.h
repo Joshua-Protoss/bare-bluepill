@@ -38,6 +38,7 @@ bool i2c_write(uint8_t addr, uint8_t reg, uint8_t *data, uint8_t len);
 bool i2c_read(uint8_t addr, uint8_t reg, uint8_t *data, uint8_t len);
 bool i2c_probe(uint8_t addr);                                               // Scan for device
 
+extern const I2C_config_t MAX30102_I2C_CFG;
 
 
 #endif // INC_I2C_H
