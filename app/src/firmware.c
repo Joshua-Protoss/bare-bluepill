@@ -6,6 +6,7 @@
 #include "usart.h"
 #include "timers.h"
 #include "nvic.h"
+#include "i2c.h"
 
 #define SYSTICK_FREQ                    (1000)            // the desired systick frequency, 1000Hz means 1ms per tick  
 #define USART_PORT                      (RCC_GPIOA)
@@ -23,49 +24,6 @@ static const uint8_t msg_prompt[] = "\r\n>";
 
 void systick_handler(void){
     systick_ticks++;
-}
-
-void timer3_isr(void) {
-    static uint32_t last_rising = 0;
-    static uint32_t period = 0;
-    static bool measuring_duty = false;             // false = waiting for rising, true = waiting for falling
-
-    if (TIM3->SR & TIM_SR_CC1IF) {
-        uint32_t capture = TIM3->CCR1;
-
-        if (!measuring_duty) {
-             // === RISING EDGE CAPTURED ===
-             if (capture >= last_rising) {
-                period = capture - last_rising;
-             } else {
-                period = (0xFFFF - last_rising) + capture + 1;
-             }
-
-            last_rising = capture;
-            // Now switch to falling edge to measure duty
-            TIM3->CCER |= TIM_CCER_CC1P;                // Set CC1P=1 → falling edge
-            measuring_duty = true;
-        } else {
-            // === FALLING EDGE CAPTURED ===
-            uint32_t duty_ticks;
-            if (capture >= last_rising) {
-                duty_ticks = capture - last_rising;
-            } else {
-                duty_ticks = (0xFFFF - last_rising) + capture + 1;
-            }
-
-            // Store the measurements
-            tim_pwm_capture_t *cap = tim_ic_get_pwm_capture();
-            cap->period = period;
-            cap->duty = duty_ticks;
-            cap->new_data = true;
-
-            // Switch back to rising edge for next cycle
-            TIM3->CCER &= ~TIM_CCER_CC1P;               // Set CC1P=0 → rising edge
-            measuring_duty = false;
-        }
-        TIM3->SR &= ~TIM_SR_CC1IF;  
-    } 
 }
 
 void uart_setup(){
@@ -86,23 +44,23 @@ void uart_setup(){
     usart_printf(USART1, "APB2: %lu Hz\r\n", rcc_get_apb2_freq());
 }
 
-void input_capture_test(void) {
-    rcc_periph_clock_enable(RCC_TIM2);              // GPIO port A should be activated in uart_setup()
-    rcc_periph_clock_enable(RCC_TIM3);              // make sure uart_setup() is called first
+void max30102_i2c_test(void) {
+    uint8_t part_id, rev_id;
 
-    // PA0 = TIM2_CH1 output (generate PWM)
-    gpio_set_mode(PORT_GPIOA, PIN_GPIO0, GPIO_MODE_OUTPUT_50MHZ, GPIO_CNF_OUTPUT_AF_PUSHPULL);
-    // PA6 = TIM3_CH1 input (read PWM)
-    gpio_set_mode(PORT_GPIOA, PIN_GPIO6, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOATING);
+    // Read part ID
+    if (i2c_read(0x57, 0xFF, &part_id, 1)) {
+        usart_printf(USART1, "Part ID: 0x%02X (expected 0x15)\r\n", part_id);
+        if (part_id == 0x15) {
+            usart_printf(USART1, "I2C working! \r\n");
+        }
+    } else {
+        usart_printf(USART1, "I2C read failed! Check connections. \r\n");
+    }
 
-    uint32_t apb1_timer_clk = rcc_get_apb1_timer_freq();  // Should be 44 MHz
-
-    // Generate 1kHz PWM with 30% duty cycle
-    tim_oc_init(TIM2, &PWM_CH1_1KHZ_30, apb1_timer_clk);
-    // Configure TIM3 CH1 to read PWM in PWM input mode
-    tim_ic_init(TIM3, &INPUT_CAPTURE_RISING_44MHZ, apb1_timer_clk);
-    // enable nvic
-    nvic_enable_irq(NVIC_TIM3_IRQ);
+    // Read Revision ID
+    if (i2c_read(0x57, 0xFE, &rev_id, 1)) {
+        usart_printf(USART1, "Rev ID: 0x%02X\r\n", rev_id);
+    }
 }
 
 int main(void) {
@@ -114,23 +72,13 @@ int main(void) {
 
     usart_printf(USART1, "APB1 Timer Clock: %lu Hz\r\n", rcc_get_apb1_timer_freq());
     usart_printf(USART1, "Expected PWM period: %lu ticks @ 1kHz\r\n", rcc_get_apb1_timer_freq() / 1000);
-    input_capture_test();
+
     while(1){
-        if (tim_ic_is_new_data_ready()) {
-            tim_ic_clear_new_data();
 
-            tim_pwm_capture_t *cap = tim_ic_get_pwm_capture();
-            uint32_t period = cap->period;
-            uint32_t duty = cap->duty;
-
-            if (period > 0 && period < 100000) {
-                float duty_pct = ((float)duty / (float)period) * 100.0f;
-                float freq = (float)rcc_get_apb1_timer_freq() / (float)period;
-                usart_printf(USART1, "Period: %lu ticks, Duty: %.1f%%, Freq: %.1fHz \r\n", period, duty_pct, freq);
-            }
+        
         }
        __asm__("wfi");  // Sleep, save power!
-    }
+    
 
     return 0;
 }

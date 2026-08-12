@@ -33,6 +33,7 @@ OBJS += $(BSP_SRC_DIR)/dma.o
 OBJS += $(BSP_SRC_DIR)/syscalls.o
 OBJS += $(BSP_SRC_DIR)/adc.o
 OBJS += $(BSP_SRC_DIR)/watchdog.o
+OBJS += $(BSP_SRC_DIR)/dac.o
 
 ###################################################################
 # C Flags
