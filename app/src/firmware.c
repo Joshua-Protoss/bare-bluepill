@@ -19,7 +19,7 @@
 volatile uint32_t systick_ticks = 0;
 
 // Pre-defined messages as uint8_t arrays
-static const uint8_t msg_welcome[] = "Input Capture Terminal\r\n";
+static const uint8_t msg_welcome[] = "\r\n=== I2C MAX30102 Test ===\r\n";
 static const uint8_t msg_prompt[] = "\r\n>";
 
 void systick_handler(void){
@@ -44,6 +44,26 @@ void uart_setup(){
     usart_printf(USART1, "APB2: %lu Hz\r\n", rcc_get_apb2_freq());
 }
 
+void debug_gpio_state(void) {
+    usart_printf(USART1, "\r\n=== GPIO Debug ===\r\n");
+    
+    // Set SCL high, read back
+    scl_high();
+    usart_printf(USART1, "SCL after high: %d\r\n", 
+                 gpio_read_pin(PORT_GPIOB, PIN_GPIO6));
+    
+    // Set SDA high, read back
+    sda_high();
+    usart_printf(USART1, "SDA after high: %d\r\n", 
+                 gpio_read_pin(PORT_GPIOB, PIN_GPIO7));
+    
+    // Set SDA low, read back
+    sda_low();
+    usart_printf(USART1, "SDA after low: %d\r\n", 
+                 gpio_read_pin(PORT_GPIOB, PIN_GPIO7));
+    sda_high();
+}
+
 void max30102_i2c_test(void) {
     i2c_bitbang_init(&MAX30102_I2C_CFG);
 
@@ -58,8 +78,8 @@ void max30102_i2c_test(void) {
 
     // Read Part ID (register 0xFF)
     uint8_t part_id;
-    if (i2c_read(0x57, 0xFF, &part_id, 1)) {
-        usart_printf(USART1, "Part ID: 0x%02X ", part_id);
+    if (i2c_read(0x57, 0xFF, &part_id, 1)) {                                         // "Set your register pointer to 0xFF (Part ID register)"
+        usart_printf(USART1, "Part ID: 0x%02X ", part_id);                           // we will get data from the 0xFF (part id) register
         if (part_id == 0x15) {
             usart_printf(USART1, "MAX30102 detected! \r\n");
         } else {
@@ -73,7 +93,11 @@ void max30102_i2c_test(void) {
     uint8_t rev_id;
     if (i2c_read(0x57, 0xFE, &rev_id, 1)) {
         usart_printf(USART1, "Revision ID: 0x%02X\r\n", rev_id);
+    } else {
+        usart_printf(USART1, "Failed to read Revision ID \r\n");
     }
+
+    usart_printf(USART1, "=== Test Complete ===\r\n");
 }
 
 int main(void) {
@@ -89,7 +113,7 @@ int main(void) {
 
     while(1){
         __asm__("wfi");  // Sleep, save power!
-        
+
     }
        
 
