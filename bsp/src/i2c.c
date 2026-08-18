@@ -1,6 +1,7 @@
 #include "i2c.h"
 #include "rcc.h"
 #include "systick.h"
+#include "usart.h"
 
 // Current configuration
 static I2C_config_t current_config;
@@ -8,43 +9,32 @@ static bool initialized = false;
 
 // ===== LOW-LEVEL GPIO CONTROL =====
 static inline void scl_low(void) {
-    gpio_set_mode(current_config.port, current_config.scl_pin,
-        GPIO_MODE_INPUT, GPIO_CNF_OUTPUT_PUSHPULL);
     gpio_write_pin(current_config.port, current_config.scl_pin, 0);
 }
 
 static inline void scl_high(void) {
-    //  gpio_write_pin(current_config.port, current_config.scl_pin, 1);
-    gpio_set_mode(current_config.port, current_config.scl_pin,
-                GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOATING);
+    gpio_write_pin(current_config.port, current_config.scl_pin, 1);
 }
 
 static inline void sda_low(void) {                                       // For open-drain, set pin LOW (output mode drives low)
     gpio_set_mode(current_config.port, current_config.sda_pin,
-        GPIO_MODE_INPUT, GPIO_CNF_OUTPUT_PUSHPULL);
+                  GPIO_MODE_OUTPUT_50MHZ, GPIO_CNF_OUTPUT_PUSHPULL);
     gpio_write_pin(current_config.port, current_config.sda_pin, 0);      // First, ensure pin is in output mode
 }
 
 static inline void sda_high (void) {                                     // For open-drain, "release" the pin (set to input/floating)
-    //gpio_write_pin(current_config.port, current_config.sda_pin, 1);      // The pull-up resistor will pull it HIGH
-    gpio_set_mode(current_config.port, current_config.sda_pin,
+    gpio_set_mode(current_config.port, current_config.sda_pin,           // The pull-up resistor will pull it HIGH
               GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOATING);
 }
 
 static inline uint8_t sda_read(void) {
-    return gpio_read_pin(current_config.port, current_config. sda_pin);
+    return gpio_read_pin(current_config.port, current_config.sda_pin);
 }
 
 // ===== DELAY FUNCTIONS =====                                            // For 100kHz: bit period = 10µs, half = 5µs
-static void i2c_delay_half_bit(void) {                                    // For 400kHz: bit period = 2.5µs, half = 1.25µs
-    if (current_config.speed_hz <= 100000) {                              // ~5µs delay for 100kHz
-        for (volatile uint32_t i = 0; i < 500; i++) {
-            __asm__("nop");
-        }
-    } else {                                                              // ~1.25µs delay for 400kHz
-        for (volatile uint32_t i = 0; i < 12; i++) {
-            __asm__("nop");
-        }
+static void i2c_delay_half_bit(void) {                                    // For 400kHz: bit period = 2.5µs, half = 1.25µs                   
+    for (volatile uint32_t i = 0; i < 220; i++) {                         // ~5µs delay for 100kHz
+        __asm__("nop");
     }
 }
 
@@ -56,6 +46,7 @@ static void i2c_start(void) {                                          // START:
     sda_low();                                                         // A split-second later, the Master pulls SCL LOW.
     i2c_delay_half_bit();                                              // Every slave on the bus sees this specific transition
     scl_low();                                                         // and resets its internal bit counters.
+    i2c_delay_half_bit();
 }
 
 static void i2c_stop(void) {                                           // STOP: SDA goes HIGH while SCL is HIGH
@@ -115,6 +106,7 @@ static uint8_t i2c_read_byte(bool send_ack) {                          // Releas
     i2c_delay_half_bit();
     scl_low();
     sda_high();                                                         // Release SDA
+    i2c_delay_half_bit();
     return data;
 }
 
@@ -125,8 +117,9 @@ void i2c_bitbang_init(const I2C_config_t *config) {                     // Confi
     gpio_set_mode(config->port, config->scl_pin,                        // SCL: Output push-pull (always drive it)
         GPIO_MODE_OUTPUT_50MHZ, GPIO_CNF_OUTPUT_PUSHPULL);              // SDA: switch between output LOW and input FLOATING
     gpio_set_mode(config->port, config->sda_pin,                        // Start with output HIGH (which drives it high via push-pull temporarily)
-        GPIO_MODE_OUTPUT_50MHZ, GPIO_CNF_OUTPUT_PUSHPULL);              // Use gpio_write_pin to set LOW, or switch to input for HIGH   
-    scl_high();                                                         // Ensure both lines start HIGH (idle state)
+        GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOATING);                      // Use gpio_write_pin to set LOW, or switch to input for HIGH   
+    gpio_write_pin(config->port, config->scl_pin, 1);                   // Ensure both lines start HIGH (idle state)
+    scl_high();                                                        
     sda_high();
     initialized = true;
 }
@@ -197,6 +190,31 @@ const I2C_config_t MAX30102_I2C_CFG = {
     .speed_hz = 100000,                                                 // 100kHz standard mode
 };
 
+void debug_gpio_state(void) {
+    usart_printf(USART1, "\r\n=== GPIO Debug ===\r\n");
+    
+    // Set SCL high, read back
+    scl_high();
+    usart_printf(USART1, "SCL after high: %d\r\n", 
+                 gpio_read_pin(PORT_GPIOB, PIN_GPIO6));
+    
+    // Set SCL low, read back
+    scl_low();
+    usart_printf(USART1, "SCL after low: %d\r\n", 
+                 gpio_read_pin(PORT_GPIOB, PIN_GPIO6));
+    
+    // Set SDA high, read back
+    sda_high();
+    usart_printf(USART1, "SDA after high: %d\r\n", 
+                 gpio_read_pin(PORT_GPIOB, PIN_GPIO7));
+    
+    // Set SDA low, read back
+    sda_low();
+    usart_printf(USART1, "SDA after low: %d\r\n", 
+                 gpio_read_pin(PORT_GPIOB, PIN_GPIO7));
+    sda_high();
+}
+
 // ===== HARDWARE I2C FUNCTIONS =====
 void i2c_hardware_init(void) {
     // Enable GPIOB and I2C1 clocks
@@ -216,7 +234,7 @@ void i2c_hardware_init(void) {
     // PCLK1 = 22MHz (your APB1)
     // CCR = PCLK1 / (2 * 100kHz) = 110
     I2C1->CR2 = 22;                                                 // FREQ = 22MHz
-    I2C1->CR2 = 110;                                                // 100kHz
+    I2C1->CCR = 110;                                                // 100kHz
     I2C1->TRISE = 23;                                               // Max rise time
 
     // Enable I2C
@@ -225,10 +243,40 @@ void i2c_hardware_init(void) {
 
 bool i2c_hardware_read(uint8_t addr, uint8_t reg, uint8_t *data, uint8_t len) {
     // Wait for bus idle
-    while(I2C1->SR2 & BIT(1));                                      // BUSY
+    while(I2C1->SR2 & I2C_SR2_BUSY);                            // BUSY
 
     // Generate START
+    I2C1->CR1 |= I2C_CR1_START;
+    while(!(I2C1->SR1 & I2C_SR1_SB));
+
+    // Send address (write)
+    I2C1->DR = (addr << 1) | 0;
+    while(!(I2C1->SR1 & I2C_SR1_ADDR));
+    (void)I2C1->SR2;                                            // Clear ADDR flag
+
+    // Send register
+    I2C1->DR = reg;
+    while(!(I2C1->SR1 & I2C_SR1_TxE));                          // TXE
+
+    // Repeated START
+    I2C1->CR1 |= I2C_CR1_START;
+    while (!(I2C1->SR1 & I2C_SR1_SB));
+
+    // Send address (read)
+    I2C1->DR = (addr << 1) | 1;                                 // Reading I2C_SR2 after reading I2C_SR1 clears the ADDR flag, even if the ADDR flag was
+    while(!(I2C1->SR1 & I2C_SR1_ADDR));                         // set after reading I2C_SR1. Consequently, I2C_SR2 must be read only when ADDR is found                                                                     
+    (void)I2C1->SR2;                                            // set in I2C_SR1 or when the STOPF bit is cleared.          
     
+    // Read data
+    for (uint8_t i = 0; i < len; i++) {
+        while(!(I2C1->SR1 & I2C_SR1_RxNE));                     // 1: Data register not empty
+        data[i] = I2C1->DR;
+    }
+
+    // Generate STOP
+    I2C1->CR1 |= I2C_CR1_STOP;
+
+    return true;
 }
 
 // static void sda_set_output(void) {                                       // Better SDA handling: switch between output and input
