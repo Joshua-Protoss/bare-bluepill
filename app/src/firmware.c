@@ -90,64 +90,6 @@ void i2c_scan_bus(void) {
     usart_printf(USART1, "=== Scan Complete ===\r\n");
 }
 
-void i2c_bitbang_temp(void) {
-    uint8_t temp_int, temp_frac;
-
-    // Read temperature (integer part)
-    if (i2c_read(0x57, 0x1F, &temp_int, 1)) {
-        int8_t temp_c = (int8_t) temp_int;
-        usart_printf(USART1, "Die Temperature: %d°C\r\n", temp_c);
-    }
-
-    // Read temperature fractional (0x20)
-    if (i2c_read(0x57, 0x20, &temp_frac, 1)) {
-        float temp = (int8_t)temp_int + (temp_frac * 0.0625f);
-        usart_printf(USART1, "Precise Temp: %.2f°C\r\n", temp);
-    }
-
-    // Read interrupt status (0x00)
-    uint8_t int_status;
-    if (i2c_read(0x57, 0x00, &int_status, 1)) {
-        usart_printf(USART1, "Interrupt Status: 0x%02X\r\n", int_status);
-    }
-}
-
-void i2c_sensor_init(void) {
-    // Reset the device
-    i2c_write(0x57, 0x09, (uint8_t[]){0x40}, 1);            // MODE: Reset
-    systick_delay_ms(100);                                  // Wait for reset
-    // FIFO Configuration
-    i2c_write(0x57, 0x08, (uint8_t[]){0x4F}, 1);            // Sample avg=4, FIFO rollover
-    // Mode Configuration: SpO2 mode
-    i2c_write(0x57, 0x09, (uint8_t[]){0x03}, 1);            // SpO2 mode
-    // SpO2 Configuration
-    i2c_write(0x57, 0x0A, (uint8_t[]){0x27}, 1);            // ADC range = 4096nA, sample rate=100Hz, pulse width=411µs
-    // LED Pulse Amplitude (IR LED)                         // if your raw values are already above 100000 leave it
-    i2c_write(0x57, 0x0D, (uint8_t[]){0x24}, 1);            // ~7.2mA, if your raw values are sitting below 50,000 increase it
-    // LED Pulse Amplitude (Red LED)                        
-    i2c_write(0x57, 0x0C, (uint8_t[]){0x24}, 1);            // ~7.2mA
-    // Enable temperature sensor
-    i2c_write(0x57, 0x21, (uint8_t[]){0x01}, 1);
-    //  Wait for everything to stabilize
-    systick_delay_ms(50);
-}
-
-// Read FIFO data (3 bytes per sample: IR[18:11], IR[10:3], IR[2:0]+Red[18:15], etc.)
-void i2c_bitbang_fifo(void) {
-    uint8_t fifo_data[6];                                   // 2 samples worth
-    // Read 6 bytes from FIFO (0x07)
-    if (i2c_read(0x57, 0x07, fifo_data, 6)) {
-        // Parse first sample (first 3 bytes)
-        uint32_t ir_sample  = (fifo_data[0] << 16) | (fifo_data[1] << 8) | fifo_data[2];
-        uint32_t red_sample = (fifo_data[3] << 16) | (fifo_data[4] << 8) | fifo_data[5];
-
-        ir_sample &= 0x3FFFF;               // 18-bit value
-        red_sample &= 0x3FFFF;              // 18-bit value
-
-        usart_printf(USART1, "IR: %lu, Red: %lu\r\n", ir_sample, red_sample);
-    }
-}
-
 int main(void) {
     rcc_clock_configure(&RCC_CLOCK_HSE_44MHZ);
     systick_set_frequency(SYSTICK_FREQ, rcc_get_ahb_freq());        // 1ms tick, interrupt enabled by default
@@ -166,6 +108,7 @@ int main(void) {
         i2c_bitbang_temp();
         i2c_bitbang_fifo();
         systick_delay_ms(20);
+
         __asm__("wfi");  // Sleep, save power!
     }
        

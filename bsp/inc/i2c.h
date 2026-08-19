@@ -78,13 +78,17 @@ void i2c_bitbang_init(const I2C_config_t *config);
 bool i2c_write(uint8_t addr, uint8_t reg, uint8_t *data, uint8_t len);
 bool i2c_read(uint8_t addr, uint8_t reg, uint8_t *data, uint8_t len);
 bool i2c_probe(uint8_t addr);                                               // Scan for device
+void i2c_bitbang_fifo(void);
+void i2c_sensor_init(void);
+void i2c_bitbang_temp(void);
 void debug_gpio_state(void);
 
 // ===== HARDWARE I2C FUNCTIONS =====
-void i2c_hardware_init(void);
+void i2c_hardware_init(uint32_t speed_hz);
+bool i2c_hardware_write(uint8_t addr, uint8_t reg, uint8_t *data, uint8_t len);
 bool i2c_hardware_read(uint8_t addr, uint8_t reg, uint8_t *data, uint8_t len);
+bool i2c_hardware_probe(uint8_t addr);
 
 extern const I2C_config_t MAX30102_I2C_CFG;
-
 
 #endif // INC_I2C_H

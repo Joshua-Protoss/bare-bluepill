@@ -110,7 +110,6 @@ static uint8_t i2c_read_byte(bool send_ack) {                          // Releas
     return data;
 }
 
-// ===== INITIALIZATION =====
 void i2c_bitbang_init(const I2C_config_t *config) {                     // Configure SCL and SDA as open-drain outputs
     current_config = *config;                                           // Use push-pull but switch between output LOW and input FLOATING
                                                                         // This mimics open-drain behavior with the pull-up resistors
@@ -183,13 +182,6 @@ bool i2c_probe(uint8_t addr) {                              // In I2C communicat
     return (ack == 0);                                      // true if device responded
 }
 
-const I2C_config_t MAX30102_I2C_CFG = {
-    .scl_pin = PIN_GPIO6,                                               // PB6
-    .sda_pin = PIN_GPIO7,                                               // PB7
-    .port = PORT_GPIOB,
-    .speed_hz = 100000,                                                 // 100kHz standard mode
-};
-
 void debug_gpio_state(void) {
     usart_printf(USART1, "\r\n=== GPIO Debug ===\r\n");
     
@@ -215,8 +207,15 @@ void debug_gpio_state(void) {
     sda_high();
 }
 
+const I2C_config_t MAX30102_I2C_CFG = {
+    .scl_pin = PIN_GPIO6,                                               // PB6
+    .sda_pin = PIN_GPIO7,                                               // PB7
+    .port = PORT_GPIOB,
+    .speed_hz = 100000,                                                 // 100kHz standard mode
+};
+
 // ===== HARDWARE I2C FUNCTIONS =====
-void i2c_hardware_init(void) {
+void i2c_hardware_init(uint32_t speed_hz) {
     // Enable GPIOB and I2C1 clocks
     rcc_periph_clock_enable(RCC_GPIOB);
     rcc_periph_clock_enable(RCC_I2C1);
@@ -229,62 +228,232 @@ void i2c_hardware_init(void) {
     // Reset I2C
     I2C1->CR1 |= I2C_CR1_SWRST;                                          
     I2C1->CR1 &= ~I2C_CR1_SWRST;
-
-    // Configure clock for 100kHz
-    // PCLK1 = 22MHz (your APB1)
-    // CCR = PCLK1 / (2 * 100kHz) = 110
-    I2C1->CR2 = 22;                                                 // FREQ = 22MHz
-    I2C1->CCR = 110;                                                // 100kHz
-    I2C1->TRISE = 23;                                               // Max rise time
-
+    // Get APB1 frequency (should be 22 MHz)
+    uint32_t pclk1 = rcc_get_apb1_freq();                            // 22 MHz
+    // Configure clock
+    I2C1->CR2 = pclk1 / 1000000;                                     // FREQ = APB1 in MHz (22)
+    // Calculate CCR for desired speed
+    // For standard mode (100kHz): CCR = PCLK1 / (2 * speed)
+    // For fast mode (400kHz): CCR = PCLK1 / (3 * speed) with DUTY bit set
+    if (speed_hz <= 100000) {                                        // Standard mode
+        I2C1->CCR = pclk1 / (2 * speed_hz);
+        I2C1->TRISE = (pclk1 / 1000000) + 1;                         // Max rise time
+    } else {                                                         // Fast mode
+        I2C1->CCR = pclk1 / (3 * speed_hz);
+        I2C1->CCR |= BIT(15);                                         // DUTY = 1 for fast mode
+        I2C1->TRISE = (pclk1 / 1000000) * 3 + 1;
+    }
     // Enable I2C
     I2C1->CR1 |= I2C_CR1_PE;                                        // PE
 }
 
-bool i2c_hardware_read(uint8_t addr, uint8_t reg, uint8_t *data, uint8_t len) {
-    // Wait for bus idle
-    while(I2C1->SR2 & I2C_SR2_BUSY);                            // BUSY
+static bool i2c_wait_flag(volatile uint32_t *reg, uint32_t flag, bool set) {                    // Simple timeout helper
+    uint32_t timeout = 1000000;                                                                 // ~1 second at 44MHz
+    if (set) {
+        while(!(*reg & flag) && --timeout);
+    } else {
+        while(*reg & flag && --timeout);
+    }
+    return (timeout > 0);
+}
 
+static bool i2c_hardware_start(void) {
+    if(!i2c_wait_flag(&I2C1->SR2, I2C_SR2_BUSY, false)) {               // Wait for bus idle
+        return false;
+    }
     // Generate START
     I2C1->CR1 |= I2C_CR1_START;
-    while(!(I2C1->SR1 & I2C_SR1_SB));
+    // Wait for SB (start bit sent)
+    return i2c_wait_flag(&I2C1->SR1, I2C_SR1_SB, true);
+}
 
-    // Send address (write)
-    I2C1->DR = (addr << 1) | 0;
-    while(!(I2C1->SR1 & I2C_SR1_ADDR));
-    (void)I2C1->SR2;                                            // Clear ADDR flag
-
-    // Send register
-    I2C1->DR = reg;
-    while(!(I2C1->SR1 & I2C_SR1_TxE));                          // TXE
-
-    // Repeated START
-    I2C1->CR1 |= I2C_CR1_START;
-    while (!(I2C1->SR1 & I2C_SR1_SB));
-
-    // Send address (read)
-    I2C1->DR = (addr << 1) | 1;                                 // Reading I2C_SR2 after reading I2C_SR1 clears the ADDR flag, even if the ADDR flag was
-    while(!(I2C1->SR1 & I2C_SR1_ADDR));                         // set after reading I2C_SR1. Consequently, I2C_SR2 must be read only when ADDR is found                                                                     
-    (void)I2C1->SR2;                                            // set in I2C_SR1 or when the STOPF bit is cleared.          
-    
-    // Read data
-    for (uint8_t i = 0; i < len; i++) {
-        while(!(I2C1->SR1 & I2C_SR1_RxNE));                     // 1: Data register not empty
-        data[i] = I2C1->DR;
-    }
-
-    // Generate STOP
+static void i2c_hardware_stop(void) {
     I2C1->CR1 |= I2C_CR1_STOP;
+}
 
+static bool i2c_hardware_send_addr(uint8_t addr, bool read) {
+    // Send address with R/W bit
+    I2C1->DR = (addr << 1) | (read ? 1 : 0);
+    // Wait for ADDR flag
+    if(!i2c_wait_flag(&I2C1->SR1, I2C_SR1_ADDR, true)){
+        return false;
+    }
+    // Clear ADDR by reading SR2
+    (void)I2C1->SR2;
     return true;
 }
 
-// static void sda_set_output(void) {                                       // Better SDA handling: switch between output and input
-//     gpio_set_mode(current_config.port, current_config.sda_pin,           // Set SDA as output push-pull to drive LOW
-//         GPIO_MODE_OUTPUT_50MHZ, GPIO_CNF_OUTPUT_AF_PUSHPULL);
-// }
+bool i2c_hardware_write(uint8_t addr, uint8_t reg, uint8_t *data, uint8_t len){
+    // Generate START
+    if(!i2c_hardware_start()) {
+        i2c_hardware_stop();
+        return false;
+    }
+    // Send address (write)
+    if(!i2c_hardware_send_addr(addr, false)) {
+        i2c_hardware_stop();
+        return false;
+    }
+    // Send register address
+    I2C1->DR = reg;
+    if(!i2c_wait_flag(&I2C1->SR1, I2C_SR1_TxE, true)) {
+        i2c_hardware_stop();
+        return false;
+    }
+    // Send data bytes
+    for(uint8_t i = 0; i < len; i++) {
+        I2C1->DR = data[i];
+        if(!i2c_wait_flag(&I2C1->SR1, I2C_SR1_TxE, true)) {
+            i2c_hardware_stop();
+            return false;
+        }
+    }
+    // Generate STOP
+    i2c_hardware_stop();
+    return true;
+}
 
-// static void sda_set_input(void) {                                        // Set SDA as input floating to "release" (pull-up pulls it HIGH)
-//     gpio_set_mode(current_config.port, current_config.sda_pin,
-//         GPIO_MODE_OUTPUT_50MHZ, GPIO_CNF_INPUT_FLOATING);
-// }
+bool i2c_hardware_read(uint8_t addr, uint8_t reg, uint8_t *data, uint8_t len) {
+    if (len == 0) return false;
+    // ===== Phase 1: Set register pointer =====
+    if (!i2c_hardware_start()) {
+        i2c_hardware_stop();
+        return false;
+    }
+    // Send address (write)
+    if (!i2c_hardware_send_addr(addr, false)) {
+        i2c_hardware_stop();
+        return false;
+    }
+    // Send register address
+    I2C1->DR = reg;
+    if(!i2c_wait_flag(&I2C1->SR1, I2C_SR1_TxE, true)){
+        i2c_hardware_stop();
+        return false;
+    }
+
+    // ===== Phase 2: Repeated START and read =====
+    if(!i2c_hardware_start()) {
+        i2c_hardware_stop();
+        return false;
+    }
+    // Send address (read)
+    if(!i2c_hardware_send_addr(addr, true)) {
+        i2c_hardware_stop();
+        return false;
+    }
+
+    // Read data
+    for (uint8_t i = 0; i < len; i++) {
+        if (!i2c_wait_flag(&I2C1->SR1, I2C_SR1_RxNE, true)) {                                         // Wait for data
+            i2c_hardware_stop();
+            return false;
+        }
+        data[i] = I2C1->DR;
+    }
+
+    i2c_hardware_stop();
+    return true;
+}
+
+bool i2c_hardware_probe(uint8_t addr) {
+    // Generate START
+    if(!i2c_hardware_start()) {
+        i2c_hardware_stop();
+        return false;
+    }
+
+    // Send address (write)
+    I2C1->DR = (addr << 1) | 0;
+    // Wait for ADDR or AF (acknowledge failure)
+    uint32_t timeout = 100000;
+    while (--timeout) {
+        if (I2C1->SR1 & I2C_SR1_ADDR) {
+            (void)I2C1->SR2;                                    // Clear ADDR
+            i2c_hardware_stop();
+            return true;                                        // Device ACKed!
+        }
+        if (I2C1->SR1 & I2C_SR1_AF) {
+            I2C1->SR1 &= ~I2C_SR1_AF;                           // Clear AF
+            i2c_hardware_stop();
+            return false;
+        }
+    }
+    i2c_hardware_stop();
+    return false;
+}
+
+// ===== BITBANG I2C DATA FUNCTIONS =====
+void i2c_bitbang_temp(void) {
+    uint8_t temp_int, temp_frac;
+
+    // Read temperature (integer part)
+    if (i2c_read(0x57, 0x1F, &temp_int, 1)) {
+        int8_t temp_c = (int8_t) temp_int;
+        usart_printf(USART1, "Die Temperature: %d°C\r\n", temp_c);
+    }
+
+    // Read temperature fractional (0x20)
+    if (i2c_read(0x57, 0x20, &temp_frac, 1)) {
+        float temp = (int8_t)temp_int + (temp_frac * 0.0625f);
+        usart_printf(USART1, "Precise Temp: %.2f°C\r\n", temp);
+    }
+
+    // Read interrupt status (0x00)
+    uint8_t int_status;
+    if (i2c_read(0x57, 0x00, &int_status, 1)) {
+        usart_printf(USART1, "Interrupt Status: 0x%02X\r\n", int_status);
+    }
+}
+
+void i2c_sensor_init(void) {
+    // Reset the device
+    i2c_write(0x57, 0x09, (uint8_t[]){0x40}, 1);            // MODE: Reset
+    systick_delay_ms(100);                                  // Wait for reset
+    // FIFO Configuration
+    i2c_write(0x57, 0x08, (uint8_t[]){0x4F}, 1);            // Sample avg=4, FIFO rollover
+    // Mode Configuration: SpO2 mode
+    i2c_write(0x57, 0x09, (uint8_t[]){0x03}, 1);            // SpO2 mode
+    // SpO2 Configuration
+    i2c_write(0x57, 0x0A, (uint8_t[]){0x27}, 1);            // ADC range = 4096nA, sample rate=100Hz, pulse width=411µs
+    // LED Pulse Amplitude (IR LED)                         // if your raw values are already above 100000 leave it
+    i2c_write(0x57, 0x0D, (uint8_t[]){0x24}, 1);            // ~7.2mA, if your raw values are sitting below 50,000 increase it
+    // LED Pulse Amplitude (Red LED)                        
+    i2c_write(0x57, 0x0C, (uint8_t[]){0x24}, 1);            // ~7.2mA
+    // Enable temperature sensor
+    i2c_write(0x57, 0x21, (uint8_t[]){0x01}, 1);
+    //  Wait for everything to stabilize
+    systick_delay_ms(50);
+}
+
+void i2c_bitbang_fifo(void) {
+    uint8_t fifo_data[6];                                   // 2 samples worth
+    uint8_t write_ptr, read_ptr;
+    // Read the write and read pointers to see how many samples are waiting
+    if (!i2c_read(0x57, 0x04, &write_ptr, 1)) return;
+    if (!i2c_read(0x57, 0x06, &read_ptr, 1)) return;
+
+    // Calculate total unread samples sitting in the FIFO
+    int num_samples = (int)write_ptr - (int)read_ptr;
+    if (num_samples < 0) {
+        num_samples += 32;                                  // Handle pointer rollover wrap-around
+    }
+
+    // Loop and read every single available sample, each sample: 6 bytes from FIFO (0x07)
+    // Infrared light (950nm) penetrates deeply into human flesh and bone, resulting in much higher transmission back to the sensor photodiode.
+    // Red light (660nm) is highly absorbed by tissue, melanin, and hemoglobin, resulting in much lower transmission.
+    // if you got Red > IR, then reverse the fifo_data reading --> IR = fifo[3], fifo[4], fifo[5] | red = fifo[0], fifo[1], fifo[2]
+    for (uint8_t i = 0; i < num_samples; i++) {
+        if (i2c_read(0x57, 0x07, fifo_data, 6)) {
+            // Parse first sample (first 3 bytes), 18 bits per data sample, last buffer hold the last 2 bits, The remaining 6 bits are padding (zeros).
+            uint32_t ir_sample  = (fifo_data[0] << 16) | (fifo_data[1] << 8) | fifo_data[2]; // fifo_data[2] is the last 2 bits
+            uint32_t red_sample = (fifo_data[3] << 16) | (fifo_data[4] << 8) | fifo_data[5]; // fifo_data[5] is the last 2 bits
+            // MAX30102 data is left-justified, fifo_data[0] acts as the "millions/thousands" place (the most significant byte).
+            // fifo_data[1] acts as the "hundreds/tens" place (the middle byte), fifo_data[2] acts as the "decimal/ones" place (the least significant byte)
+            ir_sample &= 0x3FFFF;               // 18-bit value
+            red_sample &= 0x3FFFF;              // 18-bit value
+
+            usart_printf(USART1, "IR: %lu, Red: %lu\r\n", ir_sample, red_sample);
+        }
+    }
+}
