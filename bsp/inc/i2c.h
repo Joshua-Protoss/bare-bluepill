@@ -60,11 +60,11 @@ typedef struct {
 // SR2 bits
 #define I2C_SR2_MSL                         BIT(0)                                  // Master/slave
 #define I2C_SR2_BUSY                        BIT(1)                                  // Bus busy
-#define I2C_SR1_TRA                         BIT(2)                                  // Transmitter/receiver
-#define I2C_SR1_GENCALL                     BIT(4)                                  // General call address (Slave mode) 
-#define I2C_SR1_SMBDEFAULT                  BIT(5)                                  // SMBus device default address (Slave mode) 
-#define I2C_SR1_SMBHOST                     BIT(6)                                  // SMBus host header (Slave mode)
-#define I2C_SR1_DUALF                       BIT(7)                                  // Dual flag (Slave mode)
+#define I2C_SR2_TRA                         BIT(2)                                  // Transmitter/receiver
+#define I2C_SR2_GENCALL                     BIT(4)                                  // General call address (Slave mode) 
+#define I2C_SR2_SMBDEFAULT                  BIT(5)                                  // SMBus device default address (Slave mode) 
+#define I2C_SR2_SMBHOST                     BIT(6)                                  // SMBus host header (Slave mode)
+#define I2C_SR2_DUALF                       BIT(7)                                  // Dual flag (Slave mode)
 
 typedef struct {
     uint8_t scl_pin;
@@ -88,6 +88,8 @@ void i2c_hardware_init(uint32_t speed_hz);
 bool i2c_hardware_write(uint8_t addr, uint8_t reg, uint8_t *data, uint8_t len);
 bool i2c_hardware_read(uint8_t addr, uint8_t reg, uint8_t *data, uint8_t len);
 bool i2c_hardware_probe(uint8_t addr);
+bool i2c_hardware_read_fifo(uint8_t addr, uint8_t *data, uint8_t len);
+void i2c_hardware_sensor_init(void);
 
 extern const I2C_config_t MAX30102_I2C_CFG;
 

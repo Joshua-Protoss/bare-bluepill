@@ -110,6 +110,7 @@ static uint8_t i2c_read_byte(bool send_ack) {                          // Releas
     return data;
 }
 
+// ===== HIGH-LEVEL FUNCTIONS =====
 void i2c_bitbang_init(const I2C_config_t *config) {                     // Configure SCL and SDA as open-drain outputs
     current_config = *config;                                           // Use push-pull but switch between output LOW and input FLOATING
                                                                         // This mimics open-drain behavior with the pull-up resistors
@@ -123,7 +124,6 @@ void i2c_bitbang_init(const I2C_config_t *config) {                     // Confi
     initialized = true;
 }
 
-// ===== HIGH-LEVEL FUNCTIONS =====
 bool i2c_write(uint8_t addr, uint8_t reg, uint8_t *data, uint8_t len) {
     if (!initialized) return false;
     i2c_start();
@@ -219,168 +219,303 @@ void i2c_hardware_init(uint32_t speed_hz) {
     // Enable GPIOB and I2C1 clocks
     rcc_periph_clock_enable(RCC_GPIOB);
     rcc_periph_clock_enable(RCC_I2C1);
+    systick_delay_ms(10);
+
+    // DISABLE I2C
+    I2C1->CR1 &= ~I2C_CR1_PE;
+    systick_delay_ms(10);
+
+    // Reset I2C
+    I2C1->CR1 |= I2C_CR1_SWRST;
+    systick_delay_ms(10);                                          
+    I2C1->CR1 &= ~I2C_CR1_SWRST;
+    systick_delay_ms(10);
 
     // PB6 = I2C1_SCL (Alternate Function Open-Drain)
     gpio_set_mode(PORT_GPIOB, PIN_GPIO6, GPIO_MODE_OUTPUT_50MHZ, GPIO_CNF_OUTPUT_AF_OPENDRAIN);
     // PB7 = I2C1_SDA
     gpio_set_mode(PORT_GPIOB, PIN_GPIO7, GPIO_MODE_OUTPUT_50MHZ, GPIO_CNF_OUTPUT_AF_OPENDRAIN);
+    systick_delay_ms(10);
 
-    // Reset I2C
-    I2C1->CR1 |= I2C_CR1_SWRST;                                          
-    I2C1->CR1 &= ~I2C_CR1_SWRST;
     // Get APB1 frequency (should be 22 MHz)
-    uint32_t pclk1 = rcc_get_apb1_freq();                            // 22 MHz
     // Configure clock
-    I2C1->CR2 = pclk1 / 1000000;                                     // FREQ = APB1 in MHz (22)
     // Calculate CCR for desired speed
     // For standard mode (100kHz): CCR = PCLK1 / (2 * speed)
     // For fast mode (400kHz): CCR = PCLK1 / (3 * speed) with DUTY bit set
-    if (speed_hz <= 100000) {                                        // Standard mode
-        I2C1->CCR = pclk1 / (2 * speed_hz);
-        I2C1->TRISE = (pclk1 / 1000000) + 1;                         // Max rise time
-    } else {                                                         // Fast mode
-        I2C1->CCR = pclk1 / (3 * speed_hz);
-        I2C1->CCR |= BIT(15);                                         // DUTY = 1 for fast mode
-        I2C1->TRISE = (pclk1 / 1000000) * 3 + 1;
-    }
+    I2C1->CR2 = 22;          // FREQ = 22 MHz
+    I2C1->CCR = 110;         // 100kHz (hardcoded for clarity)
+    I2C1->TRISE = 23;        // Max rise time
+    systick_delay_ms(10);
     // Enable I2C
     I2C1->CR1 |= I2C_CR1_PE;                                        // PE
+    systick_delay_ms(10);
+    usart_printf(USART1, "I2C Hardware initialized!\r\n");
 }
 
-static bool i2c_wait_flag(volatile uint32_t *reg, uint32_t flag, bool set) {                    // Simple timeout helper
-    uint32_t timeout = 1000000;                                                                 // ~1 second at 44MHz
-    if (set) {
-        while(!(*reg & flag) && --timeout);
-    } else {
-        while(*reg & flag && --timeout);
-    }
-    return (timeout > 0);
-}
+// static bool i2c_wait_flag(volatile uint32_t *reg, uint32_t flag, bool set) {                    // Simple timeout helper
+//     uint32_t timeout = 1000000;                                                                 // ~1 second at 44MHz
+//     if (set) {
+//         while(!(*reg & flag) && --timeout);
+//     } else {
+//         while(*reg & flag && --timeout);
+//     }
+//     return (timeout > 0);
+// }
 
-static bool i2c_hardware_start(void) {
-    if(!i2c_wait_flag(&I2C1->SR2, I2C_SR2_BUSY, false)) {               // Wait for bus idle
-        return false;
-    }
-    // Generate START
-    I2C1->CR1 |= I2C_CR1_START;
-    // Wait for SB (start bit sent)
-    return i2c_wait_flag(&I2C1->SR1, I2C_SR1_SB, true);
-}
-
-static void i2c_hardware_stop(void) {
-    I2C1->CR1 |= I2C_CR1_STOP;
-}
-
-static bool i2c_hardware_send_addr(uint8_t addr, bool read) {
-    // Send address with R/W bit
-    I2C1->DR = (addr << 1) | (read ? 1 : 0);
-    // Wait for ADDR flag
-    if(!i2c_wait_flag(&I2C1->SR1, I2C_SR1_ADDR, true)){
-        return false;
-    }
-    // Clear ADDR by reading SR2
-    (void)I2C1->SR2;
-    return true;
-}
+// static bool i2c_hardware_send_addr(uint8_t addr, bool read) {
+//     // Send address with R/W bit
+//     I2C1->DR = (addr << 1) | (read ? 1 : 0);
+//     // Wait for ADDR flag
+//     if(!i2c_wait_flag(&I2C1->SR1, I2C_SR1_ADDR, true)){
+//         return false;
+//     }
+//     // Clear ADDR by reading SR2
+//     (void)I2C1->SR2;
+//     return true;
+// }
 
 bool i2c_hardware_write(uint8_t addr, uint8_t reg, uint8_t *data, uint8_t len){
+    uint32_t timeout;
+    // Wait for bus idle
+    timeout = 100000;
+    while((I2C1->SR2 & I2C_SR2_BUSY) && --timeout);
+    if (timeout == 0) return false;
+
     // Generate START
-    if(!i2c_hardware_start()) {
-        i2c_hardware_stop();
-        return false;
-    }
+    I2C1->CR1 |= I2C_CR1_START;
+    timeout = 100000;
+    while (!(I2C1->SR1 & I2C_SR1_SB) && --timeout);
+    if (timeout == 0) return false;
+  
     // Send address (write)
-    if(!i2c_hardware_send_addr(addr, false)) {
-        i2c_hardware_stop();
-        return false;
-    }
+    I2C1->DR = (addr << 1) | 0;
+    timeout = 100000;
+    while(!(I2C1->SR1 & I2C_SR1_ADDR) && --timeout);
+    if (timeout == 0) return false;
+    (void)I2C1->SR2;
+
     // Send register address
     I2C1->DR = reg;
-    if(!i2c_wait_flag(&I2C1->SR1, I2C_SR1_TxE, true)) {
-        i2c_hardware_stop();
-        return false;
-    }
+    timeout = 100000;
+    while (!(I2C1->SR1 & I2C_SR1_TxE) && --timeout);
+    if (timeout == 0) return false;
+
     // Send data bytes
     for(uint8_t i = 0; i < len; i++) {
         I2C1->DR = data[i];
-        if(!i2c_wait_flag(&I2C1->SR1, I2C_SR1_TxE, true)) {
-            i2c_hardware_stop();
-            return false;
-        }
+        timeout = 100000;
+        while (!(I2C1->SR1 & I2C_SR1_TxE) && --timeout);
+        if (timeout == 0) return false;
     }
+    // Wait for BTF before STOP
+    timeout = 100000;
+    while (!(I2C1->SR1 & I2C_SR1_BTF) && --timeout);
     // Generate STOP
-    i2c_hardware_stop();
+    I2C1->CR1 |= I2C_CR1_STOP;
+    // Wait for bus idle
+    timeout = 100000;
+    while ((I2C1->SR2 & I2C_SR2_BUSY) && --timeout);
     return true;
 }
 
 bool i2c_hardware_read(uint8_t addr, uint8_t reg, uint8_t *data, uint8_t len) {
     if (len == 0) return false;
+    uint32_t timeout;
+    // Wait for bus to be free
     // ===== Phase 1: Set register pointer =====
-    if (!i2c_hardware_start()) {
-        i2c_hardware_stop();
-        return false;
-    }
+    timeout = 100000;
+    while((I2C1->SR2 & I2C_SR2_BUSY) && --timeout);
+    if (timeout == 0) return false;
+
+    // Generate START
+    I2C1->CR1 |= I2C_CR1_START;
+    timeout = 100000;
+    while(!(I2C1->SR1 & I2C_SR1_SB) && --timeout);
+    if(timeout == 0) return false;
+
     // Send address (write)
-    if (!i2c_hardware_send_addr(addr, false)) {
-        i2c_hardware_stop();
-        return false;
-    }
+    I2C1->DR = (addr << 1) | 0;
+    timeout = 100000;
+    while(!(I2C1->SR1 & I2C_SR1_ADDR) && --timeout);
+    if(timeout == 0) return false;
+    (void)I2C1->SR2;                                    // Clear ADDR
+
     // Send register address
     I2C1->DR = reg;
-    if(!i2c_wait_flag(&I2C1->SR1, I2C_SR1_TxE, true)){
-        i2c_hardware_stop();
-        return false;
-    }
+    timeout = 100000;
+    while(!(I2C1->SR1 & I2C_SR1_TxE) && --timeout);
+    if(timeout == 0) return false;
+
+    // Wait for BTF to ensure register was sent
+    timeout = 100000;
+    while(!(I2C1->SR1 & I2C_SR1_BTF) && --timeout);
+    if (timeout == 0) return false;
 
     // ===== Phase 2: Repeated START and read =====
-    if(!i2c_hardware_start()) {
-        i2c_hardware_stop();
-        return false;
-    }
+    I2C1->CR1 |= I2C_CR1_START;
+    timeout = 100000;
+    while(!(I2C1->SR1 & I2C_SR1_SB) && --timeout);
+    if (timeout == 0) return false;
+
     // Send address (read)
-    if(!i2c_hardware_send_addr(addr, true)) {
-        i2c_hardware_stop();
-        return false;
-    }
+    I2C1->DR = (addr << 1) | 1;
+    timeout = 100000;
+    while (!(I2C1->SR1 & I2C_SR1_ADDR) && --timeout);
+    if (timeout == 0) return false;
+    (void)I2C1->SR2;                                                                                    // Clear ADDR
 
     // Read data
     for (uint8_t i = 0; i < len; i++) {
-        if (!i2c_wait_flag(&I2C1->SR1, I2C_SR1_RxNE, true)) {                                         // Wait for data
-            i2c_hardware_stop();
-            return false;
-        }
+        timeout = 100000;
+        while(!(I2C1->SR1 & I2C_SR1_RxNE) && --timeout);
+        if (timeout == 0) return false;
         data[i] = I2C1->DR;
     }
-
-    i2c_hardware_stop();
+    // Generate STOP
+    I2C1->CR1 |= I2C_CR1_STOP;
+    // Wait for STOP to complete
+    timeout = 100000;
+    while((I2C1->SR2 & I2C_SR2_BUSY) && --timeout);
     return true;
 }
 
 bool i2c_hardware_probe(uint8_t addr) {
+    uint32_t timeout;
+    // Wait for bus idle
+    timeout = 100000;
+    while((I2C1->SR2 & I2C_SR2_BUSY) && --timeout);
+    if (timeout == 0) return false;
     // Generate START
-    if(!i2c_hardware_start()) {
-        i2c_hardware_stop();
-        return false;
-    }
-
+    I2C1->CR1 |= I2C_CR1_START;
+    timeout = 100000;
+    while(!(I2C1->SR1 & I2C_SR1_SB) && --timeout);
+    if (timeout == 0) return false;
     // Send address (write)
     I2C1->DR = (addr << 1) | 0;
+
     // Wait for ADDR or AF (acknowledge failure)
-    uint32_t timeout = 100000;
+    timeout = 100000;
     while (--timeout) {
         if (I2C1->SR1 & I2C_SR1_ADDR) {
             (void)I2C1->SR2;                                    // Clear ADDR
-            i2c_hardware_stop();
+            I2C1->CR1 |= I2C_CR1_STOP;
+            // Wait for STOP to complete
+            uint32_t stop_timeout = 100000;
+            while ((I2C1->SR2 & I2C_SR2_BUSY) && --stop_timeout);
             return true;                                        // Device ACKed!
         }
         if (I2C1->SR1 & I2C_SR1_AF) {
             I2C1->SR1 &= ~I2C_SR1_AF;                           // Clear AF
-            i2c_hardware_stop();
+            I2C1->CR1 |= I2C_CR1_STOP;
+            uint32_t stop_timeout = 100000;
+            while ((I2C1->SR2 & I2C_SR2_BUSY) && --stop_timeout);
             return false;
         }
     }
-    i2c_hardware_stop();
+    I2C1->CR1 |= I2C_CR1_STOP;
     return false;
+}
+
+bool i2c_hardware_read_fifo(uint8_t addr, uint8_t *data, uint8_t len){
+    uint32_t timeout;
+    // Wait for bus idle
+    timeout = 100000;
+    while((I2C1->SR2 & I2C_SR2_BUSY) && --timeout);
+    if (timeout == 0) return false;
+    // Generate START
+    I2C1->CR1 |= I2C_CR1_START;
+    timeout = 100000;
+    while(!(I2C1->SR1 & I2C_SR1_SB) && --timeout);
+    if (timeout == 0) return false;
+
+    // Send address (set register pointer)
+    I2C1->DR = (addr << 1) | 0;
+    timeout = 100000;
+    while(!(I2C1->SR1 & I2C_SR1_ADDR) && --timeout);
+    if (timeout == 0) return false;
+    (void)I2C1->SR2;
+    I2C1->DR = 0x07;
+    timeout = 100000;
+    while(!(I2C1->SR1 & I2C_SR1_TxE) && --timeout);
+    if (timeout == 0) return false;
+
+    // wait for BTF
+    timeout = 100000;
+    while(!(I2C1->SR1 & I2C_SR1_BTF) && --timeout);
+
+    // Repeated START
+    I2C1->CR1 |= I2C_CR1_START;
+    timeout = 100000;
+    while(!(I2C1->SR1 & I2C_SR1_SB) && --timeout);
+    if (timeout == 0) return false;
+
+    // Send address (read mode)
+    I2C1->DR = (addr << 1) | 1;
+    timeout = 100000;
+    while(!(I2C1->SR1 & I2C_SR1_ADDR) && --timeout);
+    if (timeout == 0) return false;
+    (void)I2C1->SR2;                                        // Clear ADDR
+
+    // Read data bytes
+    for (uint8_t i = 0; i < len; i++) {
+        timeout = 100000;
+        while(!(I2C1->SR1 & I2C_SR1_RxNE) && --timeout);
+        if (timeout == 0) return false;
+        data[i] = I2C1->DR;
+    }
+    // Generate STOP
+    I2C1->CR1 |= I2C_CR1_STOP;
+    timeout = 100000;
+    while((I2C1->SR2 & I2C_SR2_BUSY) && --timeout);
+    return true;
+}
+
+void i2c_hardware_sensor_init(void) {
+    uint8_t reg_val, read_back;
+    // Reset
+    reg_val = 0x40;
+    if (!i2c_hardware_write(0x57, 0x09, &reg_val, 1)) {
+        usart_printf(USART1, "Failed to write reset!\r\n");
+    }
+    systick_delay_ms(100);
+    if (i2c_hardware_read(0x57, 0x09, &read_back, 1)) {
+        usart_printf(USART1, "Mode reg: 0x%02X (should be 0x00 after reset)\r\n", read_back);
+    }
+    // FIFO Config
+    reg_val = 0x1F;
+    i2c_hardware_write(0x57, 0x08, &reg_val, 1);            // Sample avg=4, FIFO rollover
+    if (i2c_hardware_read(0x57, 0x08, &read_back, 1)) {
+        usart_printf(USART1, "FIFO reg: 0x%02X\r\n", read_back);
+    }
+    // Mode: SpO2
+    reg_val = 0x03;
+    i2c_hardware_write(0x57, 0x09, &reg_val, 1);
+    // SpO2 Config
+    reg_val = 0x27;
+    i2c_hardware_write(0x57, 0x0A, &reg_val, 1);            // ADC range = 4096nA, sample rate=100Hz, pulse width=411µs
+    // LED current
+    reg_val = 0x24;
+    i2c_hardware_write(0x57, 0x0C, &reg_val, 1);            // ~7.2mA, if your raw values are sitting below 50,000 increase it
+    i2c_hardware_write(0x57, 0x0D, &reg_val, 1);
+
+    if (i2c_hardware_read(0x57, 0x0C, &reg_val, 1)) {
+        usart_printf(USART1, "LED Red (0x0C): 0x%02X (expect 0x24)\r\n", reg_val);
+    }
+    // Enable temp
+    reg_val = 0x01;
+    i2c_hardware_write(0x57, 0x21, &reg_val, 1);
+    // Clear FIFO pointers
+    reg_val = 0x00;
+    i2c_hardware_write(0x57, 0x04, &reg_val, 1);            // Write pointer = 0
+    if (i2c_hardware_read(0x57, 0x04, &reg_val, 1)) {
+        usart_printf(USART1, "Write Ptr (0x04): %d\r\n", reg_val);
+    }
+    i2c_hardware_write(0x57, 0x05, &reg_val, 1);            // Overflow counter = 0
+    i2c_hardware_write(0x57, 0x06, &reg_val, 1);            // Read pointer = 0
+    if (i2c_hardware_read(0x57, 0x06, &reg_val, 1)) {
+        usart_printf(USART1, "Read Ptr (0x06): %d\r\n", reg_val);
+    }
+    systick_delay_ms(50);                                   // Wait for ~5 samples
 }
 
 // ===== BITBANG I2C DATA FUNCTIONS =====
