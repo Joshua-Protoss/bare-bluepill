@@ -108,6 +108,7 @@ typedef struct {
 #define RCC_DMA2_BIT                            1      // there is no DMA2 in bluepill
 
 // Bit positions for APB2 peripherals
+#define RCC_AFIOEN_BIT                          0
 #define RCC_GPIOA_BIT                           2      
 #define RCC_GPIOB_BIT                           3      
 #define RCC_GPIOC_BIT                           4      
@@ -117,7 +118,8 @@ typedef struct {
 #define RCC_GPIOG_BIT                           8      
 #define RCC_ADC1_BIT                            9     
 #define RCC_ADC2_BIT                            10    
-#define RCC_TIM1_BIT                            11    
+#define RCC_TIM1_BIT                            11
+#define RCC_SPI1EN_BIT                          12    
 #define RCC_USART1_BIT                          14 
 
 // Bit positions for APB1 peripherals
@@ -172,6 +174,7 @@ enum rcc_periph_clken {
     RCC_ADC1 = RCC_ENCODE(RCC_APB2_ENR_OFFSET, RCC_ADC1_BIT),
     RCC_ADC2 = RCC_ENCODE(RCC_APB2_ENR_OFFSET, RCC_ADC2_BIT),
     RCC_TIM1 = RCC_ENCODE(RCC_APB2_ENR_OFFSET, RCC_TIM1_BIT),
+    RCC_SPI1 = RCC_ENCODE(RCC_APB2_ENR_OFFSET, RCC_SPI1EN_BIT),
 };
 
 // System clock sources
