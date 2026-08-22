@@ -22,6 +22,7 @@ SRC_DIR = src
 BINARY = firmware
 
 OBJS += $(SRC_DIR)/$(BINARY).o
+OBJS += $(SRC_DIR)/sdcard.o
 OBJS += $(BSP_SRC_DIR)/startup.o
 OBJS += $(BSP_SRC_DIR)/nvic.o
 OBJS += $(BSP_SRC_DIR)/rcc.o
@@ -34,6 +35,7 @@ OBJS += $(BSP_SRC_DIR)/syscalls.o
 OBJS += $(BSP_SRC_DIR)/adc.o
 OBJS += $(BSP_SRC_DIR)/watchdog.o
 OBJS += $(BSP_SRC_DIR)/i2c.o
+OBJS += $(BSP_SRC_DIR)/spi.o
 OBJS += $(BSP_SRC_DIR)/dac.o
 
 ###################################################################

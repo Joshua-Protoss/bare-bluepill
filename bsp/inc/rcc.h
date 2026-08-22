@@ -4,7 +4,7 @@
 #include "common.h"
 
 // Helper Macros
-#define RCC_ENCODE(offset, bit_enable)          ((offset) << 5 | (bit_enable))
+#define RCC_ENCODE(offset, bit_enable)          (((offset) << 5) | (bit_enable))
 #define RCC_REG_ADDR(encoded)                   REG32(RCC_BASE + ((encoded) >> 5))
 #define RCC_BIT_MASK(encoded)                   BIT((encoded) & 0x1F)
 
@@ -160,6 +160,8 @@ enum rcc_periph_clken {
     RCC_I2C1 = RCC_ENCODE(RCC_APB1_ENR_OFFSET, RCC_I2C1EN_BIT),
     RCC_I2C2 = RCC_ENCODE(RCC_APB1_ENR_OFFSET, RCC_I2C2EN_BIT),
     RCC_WWDG = RCC_ENCODE(RCC_APB1_ENR_OFFSET, RCC_WWDGEN_BIT),
+    RCC_SPI2 = RCC_ENCODE(RCC_APB1_ENR_OFFSET, RCC_SPI2EN_BIT),
+    RCC_SPI3 = RCC_ENCODE(RCC_APB1_ENR_OFFSET, RCC_SPI3EN_BIT),
     RCC_DAC = RCC_ENCODE(RCC_APB1_ENR_OFFSET, RCC_DACEN_BIT),
 
     // APB2 peripherals
